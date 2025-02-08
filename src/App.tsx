@@ -47,15 +47,14 @@ function renderPaneByTool(
 ) {
     if (tool === 'diff') {
         return (
-            <div className="h-full flex">
+            <div className="h-full flex p-2">
                 <textarea
-                    className="w-1/2 h-full p-2"
+                    className="w-full h-full resize-none border"
                     placeholder="Enter text to compare..."
                     value={inputB}
                     onChange={(e) => setInputB(e.target.value)}
                     onKeyDown={(e) => e.stopPropagation()}
                 />
-                <div className="w-1/2 overflow-auto border-l"></div>
             </div>
         )
     }
@@ -97,6 +96,7 @@ export default function App() {
     const [inputB, setInputB] = useState('')
     const inputRef = useRef<HTMLTextAreaElement>(null)
     const [rightPaneSelected, setRightPaneSelected] = useState(false)
+    const [diffPanelHeight, setDiffPanelHeight] = useState(256)
 
     useEffect(() => {
         inputRef.current?.focus()
@@ -132,15 +132,11 @@ export default function App() {
         return renderPaneByTool(tool, inputA, inputB, setInputB)
     }
 
-    // Render diff on a character level by directly using the diff info
-    const renderDiffPanel = () => {
-        if (tool !== 'diff') return null
-
+    const renderDiffContent = () => {
         const dmp = new diff_match_patch()
         const diffs = dmp.diff_main(inputA, inputB)
         dmp.diff_cleanupSemantic(diffs)
 
-        // Helper function to split text into lines while preserving diff spans
         const splitIntoLines = (content: React.ReactNode[]) => {
             let lineNumber = 1
             const lines: React.ReactNode[][] = [[]]
@@ -205,33 +201,49 @@ export default function App() {
         const rightLines = splitIntoLines(rightContent)
 
         return (
-            <div className="border-t p-2 resize-y overflow-auto h-64 font-mono">
-                <div className="flex">
-                    <div className="w-1/2 border-r">
-                        <div className="text-sm text-gray-500 border-b mb-1">Original</div>
-                        <pre className="whitespace-pre-wrap">
-                            {leftLines.map((line, i) => (
-                                <div key={i} className="flex">
-                                    <span className="w-8 text-gray-400 select-none text-right pr-2">{i + 1}</span>
-                                    <div className="flex-1">{line}</div>
-                                </div>
-                            ))}
-                        </pre>
-                    </div>
-                    <div className="w-1/2 pl-2">
-                        <div className="text-sm text-gray-500 border-b mb-1">Modified</div>
-                        <pre className="whitespace-pre-wrap">
-                            {rightLines.map((line, i) => (
-                                <div key={i} className="flex">
-                                    <span className="w-8 text-gray-400 select-none text-right pr-2">{i + 1}</span>
-                                    <div className="flex-1">{line}</div>
-                                </div>
-                            ))}
-                        </pre>
-                    </div>
+            <div className="flex">
+                <div className="w-1/2 border-r">
+                    <div className="text-sm text-gray-500 border-b mb-1">Original</div>
+                    <pre className="whitespace-pre-wrap">
+                        {leftLines.map((line, i) => (
+                            <div key={i} className="flex">
+                                <span className="w-8 text-gray-400 select-none text-right pr-2">{i + 1}</span>
+                                <div className="flex-1">{line}</div>
+                            </div>
+                        ))}
+                    </pre>
+                </div>
+                <div className="w-1/2 pl-2">
+                    <div className="text-sm text-gray-500 border-b mb-1">Modified</div>
+                    <pre className="whitespace-pre-wrap">
+                        {rightLines.map((line, i) => (
+                            <div key={i} className="flex">
+                                <span className="w-8 text-gray-400 select-none text-right pr-2">{i + 1}</span>
+                                <div className="flex-1">{line}</div>
+                            </div>
+                        ))}
+                    </pre>
                 </div>
             </div>
         )
+    }
+
+    const handleDiffPanelResizeMouseDown = (
+        e: React.MouseEvent<HTMLDivElement>
+    ) => {
+        e.preventDefault()
+        const startY = e.clientY
+        const startHeight = diffPanelHeight
+        const onMouseMove = (event: MouseEvent) => {
+            const newHeight = startHeight - (event.clientY - startY)
+            setDiffPanelHeight(Math.max(newHeight, 100))
+        }
+        const onMouseUp = () => {
+            document.removeEventListener('mousemove', onMouseMove)
+            document.removeEventListener('mouseup', onMouseUp)
+        }
+        document.addEventListener('mousemove', onMouseMove)
+        document.addEventListener('mouseup', onMouseUp)
     }
 
     return (
@@ -240,7 +252,7 @@ export default function App() {
                 <div className="w-1/2 h-full p-2">
                     <textarea
                         ref={inputRef}
-                        className="w-full h-full border p-2"
+                        className="w-full h-full border p-2 resize-none"
                         placeholder="Enter input..."
                         value={inputA}
                         onChange={(e) => setInputA(e.target.value)}
@@ -269,7 +281,21 @@ export default function App() {
                     </div>
                 </div>
             </div>
-            {renderDiffPanel()}
+            {tool === 'diff' && (
+                <>
+                    <div
+                        onMouseDown={handleDiffPanelResizeMouseDown}
+                        className="bg-gray-300 cursor-row-resize"
+                        style={{ height: '6px' }}
+                    />
+                    <div
+                        style={{ height: diffPanelHeight }}
+                        className="border-t p-2 overflow-auto font-mono"
+                    >
+                        {renderDiffContent()}
+                    </div>
+                </>
+            )}
         </div>
     )
 }
