@@ -153,7 +153,7 @@ export default function App() {
             const lineStates: ('added' | 'removed' | 'unchanged')[] = []
             const lines: React.ReactNode[][] = [[]]
 
-            content.forEach((node) => {
+            content.forEach((node, nodeIndex) => {
                 if (typeof node === 'string') {
                     const textLines = node.split('\n')
                     textLines.forEach((line, i) => {
@@ -182,7 +182,7 @@ export default function App() {
                             if (line) {
                                 lines[lines.length - 1].push(
                                     React.cloneElement(node as React.ReactElement, {
-                                        key: `${lineNumber}-${i}`,
+                                        key: `${lineNumber}-${i}-${nodeIndex}`,
                                         children: line
                                     })
                                 )
@@ -276,7 +276,7 @@ export default function App() {
         <div className="h-screen flex flex-col">
             <div className="flex flex-1">
                 <div className="w-1/2 h-full flex flex-col">
-                    <div className="ml-2 p-2 leading-5 text-base flex-none" style={{ height: headerHeight }}>Input</div>
+                    <div className="ml-2 p-2 text-base flex-none" style={{ height: headerHeight }}>Input</div>
                     <div className="p-2 w-full h-full">
                         <textarea
                             ref={inputRef}
