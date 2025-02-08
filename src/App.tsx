@@ -16,7 +16,7 @@ function parseNumber(val: string) {
     if (val.startsWith('0x')) base = 16
     else if (val.startsWith('0b')) base = 2
     else if (val.startsWith('0o')) base = 8
-    const parsed = parseInt(val, base)
+    const parsed = Number(val)
     return {
         decimal: parsed.toString(10),
         hex: '0x' + parsed.toString(16),
@@ -288,7 +288,7 @@ export default function App() {
                         <option value="">Autodetect</option>
                         <option value="diff">Text diff</option>
                         <option value="json">JSON pretty print</option>
-                        <option value="unix">Unix time</option>
+                        <option value="unix">Unix epoch time</option>
                         <option value="number">Number conversion</option>
                     </select>
                     <div className="flex-1 overflow-auto">
