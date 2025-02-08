@@ -28,7 +28,6 @@ function parseNumber(val: string) {
 
 function detectTool(val: string) {
     const trimmed = val.trim()
-    if (!trimmed) return ''
     if (trimmed.startsWith('{')) return 'json'
     const numeric = Number(trimmed)
     if (!isNaN(numeric)) {
@@ -47,13 +46,12 @@ function renderPaneByTool(
 ) {
     if (tool === 'diff') {
         return (
-            <div className="h-full flex p-2">
+            <div className="h-full flex">
                 <textarea
-                    className="w-full h-full resize-none border"
+                    className="w-full h-full border p-2 resize-none"
                     placeholder="Enter text to compare..."
                     value={inputB}
                     onChange={(e) => setInputB(e.target.value)}
-                    onKeyDown={(e) => e.stopPropagation()}
                 />
             </div>
         )
@@ -61,15 +59,15 @@ function renderPaneByTool(
     if (tool === 'json') {
         try {
             const pretty = JSON.stringify(JSON.parse(inputA), null, 2)
-            return <pre className="p-2 overflow-auto">{pretty}</pre>
-        } catch {
-            return <div className="p-2 text-red-600">Invalid JSON</div>
+            return <pre className="overflow-auto">{pretty}</pre>
+        } catch (err) {
+            return <div className="text-red-600">Invalid JSON: {err.message}</div>
         }
     }
     if (tool === 'unix') {
         const { local, utc } = parseUnixTime(inputA)
         return (
-            <div className="p-2">
+            <div>
                 <div>Local: {local}</div>
                 <div>UTC: {utc}</div>
             </div>
@@ -79,7 +77,7 @@ function renderPaneByTool(
         const { decimal, hex, octal, binary, detectedBase } = parseNumber(inputA)
         const grayIf = (base: number) => base === detectedBase ? 'text-gray-400' : ''
         return (
-            <div className="p-2 space-y-1">
+            <div className="space-y-1">
                 <div className={grayIf(10)}>Decimal: {decimal}</div>
                 <div className={grayIf(16)}>Hex: {hex}</div>
                 <div className={grayIf(8)}>Octal: {octal}</div>
@@ -87,7 +85,7 @@ function renderPaneByTool(
             </div>
         )
     }
-    return (!tool ? <div className="p-2">No tool auto-detected.</div> : null)
+    return (!tool ? <div>No tool auto-detected.</div> : null)
 }
 
 export default function App() {
@@ -104,7 +102,7 @@ export default function App() {
 
     const handleRightPaneKeyDown = async (e: React.KeyboardEvent) => {
         const isPaste = (e.metaKey || e.ctrlKey) && e.key === 'v'
-        if (isPaste) {
+        if (isPaste && !tool) {
             e.preventDefault()
             try {
                 const text = await navigator.clipboard.readText()
@@ -118,13 +116,16 @@ export default function App() {
 
     const renderRightPane = () => {
         if (!tool) {
+            if (!inputA) {
+                return <div>Please enter some input. We will try to auto-detect the most appropriate tool. Alternatively, you can select a tool from the dropdown above.</div>
+            }
             const autodetected = detectTool(inputA)
             if (!autodetected) {
-                return <div className="p-2">No tool auto-detected. Please enter valid input or choose a tool.</div>
+                return <div>No tool auto-detected. Please enter valid input or choose a tool.</div>
             }
             return (
                 <>
-                    <div className="p-2">Auto-detected: {autodetected}</div>
+                    <div>Auto-detected: {autodetected}</div>
                     {renderPaneByTool(autodetected, inputA, inputB, setInputB)}
                 </>
             )
@@ -261,17 +262,21 @@ export default function App() {
         document.addEventListener('mouseup', onMouseUp)
     }
 
+    const headerHeight = '40px'
     return (
         <div className="h-screen flex flex-col">
             <div className="flex flex-1">
-                <div className="w-1/2 h-full p-2">
-                    <textarea
-                        ref={inputRef}
-                        className="w-full h-full border p-2 resize-none"
-                        placeholder="Enter input..."
-                        value={inputA}
-                        onChange={(e) => setInputA(e.target.value)}
-                    />
+                <div className="w-1/2 h-full flex flex-col">
+                    <div className="ml-2 p-2 leading-5 text-base flex-none" style={{ height: headerHeight }}>Input</div>
+                    <div className="p-2 w-full h-full">
+                        <textarea
+                            ref={inputRef}
+                            className="w-full h-full border p-2 resize-none"
+                            placeholder="Enter input..."
+                            value={inputA}
+                            onChange={(e) => setInputA(e.target.value)}
+                        />
+                    </div>
                 </div>
                 <div
                     className={`w-1/2 h-full flex flex-col border-l ${rightPaneSelected ? 'ring-2 ring-blue-500' : ''}`}
@@ -282,6 +287,7 @@ export default function App() {
                 >
                     <select
                         className="p-2"
+                        style={{ height: headerHeight }}
                         value={tool}
                         onChange={(e) => setTool(e.target.value)}
                     >
@@ -291,7 +297,7 @@ export default function App() {
                         <option value="unix">Unix epoch time</option>
                         <option value="number">Number conversion</option>
                     </select>
-                    <div className="flex-1 overflow-auto">
+                    <div className="flex-1 overflow-auto p-2">
                         {renderRightPane()}
                     </div>
                 </div>
