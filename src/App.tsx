@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { diffChars } from 'diff'
+import { diff_match_patch } from 'diff-match-patch'
 
 function parseUnixTime(val: string) {
     const n = Number(val)
@@ -47,12 +47,16 @@ function renderPaneByTool(
 ) {
     if (tool === 'diff') {
         return (
-            <textarea
-                className="w-full h-full p-2"
-                placeholder="Enter text to compare..."
-                value={inputB}
-                onChange={(e) => setInputB(e.target.value)}
-            />
+            <div className="h-full flex">
+                <textarea
+                    className="w-1/2 h-full p-2"
+                    placeholder="Enter text to compare..."
+                    value={inputB}
+                    onChange={(e) => setInputB(e.target.value)}
+                    onKeyDown={(e) => e.stopPropagation()}
+                />
+                <div className="w-1/2 overflow-auto border-l"></div>
+            </div>
         )
     }
     if (tool === 'json') {
@@ -128,39 +132,106 @@ export default function App() {
         return renderPaneByTool(tool, inputA, inputB, setInputB)
     }
 
-    const diff = tool === 'diff' ? diffChars(inputA, inputB) : []
+    // Render diff on a character level by directly using the diff info
+    const renderDiffPanel = () => {
+        if (tool !== 'diff') return null
 
-    // Calculate line numbers for diff display
-    const getDiffWithLineNumbers = () => {
-        let lineA = 1
-        let lineB = 1
-        let currentText = ''
+        const dmp = new diff_match_patch()
+        const diffs = dmp.diff_main(inputA, inputB)
+        dmp.diff_cleanupSemantic(diffs)
 
-        return diff.map((part, i) => {
-            const lines = part.value.split('\n')
-            const lastIdx = lines.length - 1
+        // Helper function to split text into lines while preserving diff spans
+        const splitIntoLines = (content: React.ReactNode[]) => {
+            let lineNumber = 1
+            const lines: React.ReactNode[][] = [[]]
 
-            return lines.map((line, j) => {
-                const isLastLine = j === lastIdx
-                const lineContent = isLastLine ? line : line + '\n'
-                const element = (
-                    <div key={`${i}-${j}`} className="flex">
-                        <div className="w-16 flex text-gray-500 select-none">
-                            <span className="w-8 text-right">
-                                {part.removed ? lineA++ : part.added ? '' : lineA++}
-                            </span>
-                            <span className="w-8 text-right">
-                                {part.added ? lineB++ : part.removed ? '' : lineB++}
-                            </span>
-                        </div>
-                        <pre className={`flex-1 ${part.added ? 'bg-green-200' : part.removed ? 'bg-red-200' : ''}`}>
-                            {lineContent}
+            content.forEach((node) => {
+                if (typeof node === 'string') {
+                    const textLines = node.split('\n')
+                    textLines.forEach((line, i) => {
+                        if (i > 0) {
+                            lines.push([])
+                            lineNumber++
+                        }
+                        if (line) lines[lines.length - 1].push(line)
+                    })
+                } else if (node && typeof node === 'object' && 'props' in node) {
+                    const text = (node as React.ReactElement).props.children
+                    if (text !== undefined) {
+                        const textLines = text.split('\n')
+                        textLines.forEach((line: string, i: number) => {
+                            if (i > 0) {
+                                lines.push([])
+                                lineNumber++
+                            }
+                            if (line) {
+                                lines[lines.length - 1].push(
+                                    React.cloneElement(node as React.ReactElement, {
+                                        key: `${lineNumber}-${i}`,
+                                        children: line
+                                    })
+                                )
+                            }
+                        })
+                    }
+                }
+            })
+            return lines
+        }
+
+        const leftContent = diffs.map((diff, i) => {
+            const [op, text] = diff
+            if (op === 0) {
+                return <span key={i}>{text}</span>
+            } else if (op === -1) {
+                return <span key={i} className="bg-red-200">{text}</span>
+            } else {
+                return <span key={i}></span>
+            }
+        })
+
+        const rightContent = diffs.map((diff, i) => {
+            const [op, text] = diff
+            if (op === 0) {
+                return <span key={i}>{text}</span>
+            } else if (op === 1) {
+                return <span key={i} className="bg-green-200">{text}</span>
+            } else {
+                return <span key={i}></span>
+            }
+        })
+
+        const leftLines = splitIntoLines(leftContent)
+        const rightLines = splitIntoLines(rightContent)
+
+        return (
+            <div className="border-t p-2 resize-y overflow-auto h-64 font-mono">
+                <div className="flex">
+                    <div className="w-1/2 border-r">
+                        <div className="text-sm text-gray-500 border-b mb-1">Original</div>
+                        <pre className="whitespace-pre-wrap">
+                            {leftLines.map((line, i) => (
+                                <div key={i} className="flex">
+                                    <span className="w-8 text-gray-400 select-none text-right pr-2">{i + 1}</span>
+                                    <div className="flex-1">{line}</div>
+                                </div>
+                            ))}
                         </pre>
                     </div>
-                )
-                return element
-            })
-        }).flat()
+                    <div className="w-1/2 pl-2">
+                        <div className="text-sm text-gray-500 border-b mb-1">Modified</div>
+                        <pre className="whitespace-pre-wrap">
+                            {rightLines.map((line, i) => (
+                                <div key={i} className="flex">
+                                    <span className="w-8 text-gray-400 select-none text-right pr-2">{i + 1}</span>
+                                    <div className="flex-1">{line}</div>
+                                </div>
+                            ))}
+                        </pre>
+                    </div>
+                </div>
+            </div>
+        )
     }
 
     return (
@@ -198,15 +269,7 @@ export default function App() {
                     </div>
                 </div>
             </div>
-            {tool === 'diff' && (
-                <div className="border-t p-2 resize-y overflow-auto h-64 font-mono">
-                    <div className="flex text-sm text-gray-500 pl-16 border-b mb-1">
-                        <span className="w-8 text-right">Old</span>
-                        <span className="w-8 text-right">New</span>
-                    </div>
-                    {getDiffWithLineNumbers()}
-                </div>
-            )}
+            {renderDiffPanel()}
         </div>
     )
 }
