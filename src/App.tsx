@@ -38,67 +38,25 @@ function detectTool(val: string) {
     return ''
 }
 
-function renderPaneByTool(
-    tool: string,
-    inputA: string,
-    inputB: string,
-    setInputB: React.Dispatch<React.SetStateAction<string>>
-) {
-    if (tool === 'diff') {
-        return (
-            <div className="h-full flex">
-                <textarea
-                    className="w-full h-full border p-2 resize-none"
-                    placeholder="Enter text to compare..."
-                    value={inputB}
-                    onChange={(e) => setInputB(e.target.value)}
-                />
-            </div>
-        )
-    }
-    if (tool === 'json') {
-        try {
-            const pretty = JSON.stringify(JSON.parse(inputA), null, 2)
-            return <pre className="overflow-auto">{pretty}</pre>
-        } catch (err) {
-            return <div className="text-red-600">Invalid JSON: {err.message}</div>
-        }
-    }
-    if (tool === 'unix') {
-        const { local, utc } = parseUnixTime(inputA)
-        return (
-            <div>
-                <div>Local: {local}</div>
-                <div>UTC: {utc}</div>
-            </div>
-        )
-    }
-    if (tool === 'number') {
-        const { decimal, hex, octal, binary, detectedBase } = parseNumber(inputA)
-        const grayIf = (base: number) => base === detectedBase ? 'text-gray-400' : ''
-        return (
-            <div className="space-y-1">
-                <div className={grayIf(10)}>Decimal: {decimal}</div>
-                <div className={grayIf(16)}>Hex: {hex}</div>
-                <div className={grayIf(8)}>Octal: {octal}</div>
-                <div className={grayIf(2)}>Binary: {binary}</div>
-            </div>
-        )
-    }
-    return (!tool ? <div>No tool auto-detected.</div> : null)
-}
-
 export default function App() {
     const [tool, setTool] = useState('')
     const [inputA, setInputA] = useState('')
     const [inputB, setInputB] = useState('')
     const inputRef = useRef<HTMLTextAreaElement>(null)
+    const diffTextareaRef = useRef<HTMLTextAreaElement>(null)
     const [rightPaneSelected, setRightPaneSelected] = useState(false)
     const [diffPanelHeight, setDiffPanelHeight] = useState(256)
 
     useEffect(() => {
         inputRef.current?.focus()
     }, [])
+
+    useEffect(() => {
+        if (tool === 'diff') {
+            diffTextareaRef.current?.focus()
+            diffTextareaRef.current?.setSelectionRange(diffTextareaRef.current.value.length, diffTextareaRef.current.value.length)
+        }
+    }, [tool])
 
     const handleRightPaneKeyDown = async (e: React.KeyboardEvent) => {
         const isPaste = (e.metaKey || e.ctrlKey) && e.key === 'v'
@@ -112,6 +70,57 @@ export default function App() {
                 console.error('Failed to read clipboard:', err)
             }
         }
+    }
+
+    function renderPaneByTool(
+        tool: string,
+        inputA: string,
+        inputB: string,
+        setInputB: React.Dispatch<React.SetStateAction<string>>
+    ) {
+        if (tool === 'diff') {
+            return (
+                <div className="h-full flex">
+                    <textarea
+                        ref={diffTextareaRef}
+                        className="w-full h-full border p-2 resize-none"
+                        placeholder="Enter text to compare..."
+                        value={inputB}
+                        onChange={(e) => setInputB(e.target.value)}
+                    />
+                </div>
+            )
+        }
+        if (tool === 'json') {
+            try {
+                const pretty = JSON.stringify(JSON.parse(inputA), null, 2)
+                return <pre className="overflow-auto">{pretty}</pre>
+            } catch (err) {
+                return <div className="text-red-600">Invalid JSON: {err.message}</div>
+            }
+        }
+        if (tool === 'unix') {
+            const { local, utc } = parseUnixTime(inputA)
+            return (
+                <div>
+                    <div>Local: {local}</div>
+                    <div>UTC: {utc}</div>
+                </div>
+            )
+        }
+        if (tool === 'number') {
+            const { decimal, hex, octal, binary, detectedBase } = parseNumber(inputA)
+            const grayIf = (base: number) => base === detectedBase ? 'text-gray-400' : ''
+            return (
+                <div className="space-y-1">
+                    <div className={grayIf(10)}>Decimal: {decimal}</div>
+                    <div className={grayIf(16)}>Hex: {hex}</div>
+                    <div className={grayIf(8)}>Octal: {octal}</div>
+                    <div className={grayIf(2)}>Binary: {binary}</div>
+                </div>
+            )
+        }
+        return (!tool ? <div>No tool auto-detected.</div> : null)
     }
 
     const renderRightPane = () => {
