@@ -139,6 +139,8 @@ export default function App() {
 
         const splitIntoLines = (content: React.ReactNode[]) => {
             let lineNumber = 1
+            // Track if line was modified
+            const lineStates: ('added' | 'removed' | 'unchanged')[] = []
             const lines: React.ReactNode[][] = [[]]
 
             content.forEach((node) => {
@@ -148,6 +150,7 @@ export default function App() {
                         if (i > 0) {
                             lines.push([])
                             lineNumber++
+                            lineStates.push('unchanged')
                         }
                         if (line) lines[lines.length - 1].push(line)
                     })
@@ -155,10 +158,16 @@ export default function App() {
                     const text = (node as React.ReactElement).props.children
                     if (text !== undefined) {
                         const textLines = text.split('\n')
+                        const isAddition = (node as React.ReactElement).props.className?.includes('green')
+                        const isRemoval = (node as React.ReactElement).props.className?.includes('red')
+
                         textLines.forEach((line: string, i: number) => {
                             if (i > 0) {
                                 lines.push([])
                                 lineNumber++
+                                lineStates.push(isAddition ? 'added' : isRemoval ? 'removed' : 'unchanged')
+                            } else {
+                                lineStates.push(isAddition ? 'added' : isRemoval ? 'removed' : 'unchanged')
                             }
                             if (line) {
                                 lines[lines.length - 1].push(
@@ -172,7 +181,7 @@ export default function App() {
                     }
                 }
             })
-            return lines
+            return { lines, lineStates }
         }
 
         const leftContent = diffs.map((diff, i) => {
@@ -197,8 +206,8 @@ export default function App() {
             }
         })
 
-        const leftLines = splitIntoLines(leftContent)
-        const rightLines = splitIntoLines(rightContent)
+        const { lines: leftLines, lineStates: leftLineStates } = splitIntoLines(leftContent)
+        const { lines: rightLines, lineStates: rightLineStates } = splitIntoLines(rightContent)
 
         return (
             <div className="flex">
@@ -207,7 +216,10 @@ export default function App() {
                     <pre className="whitespace-pre-wrap">
                         {leftLines.map((line, i) => (
                             <div key={i} className="flex">
-                                <span className="w-8 text-gray-400 select-none text-right pr-2">{i + 1}</span>
+                                <span className={`w-8 select-none text-right pr-2 ${leftLineStates[i] === 'removed' ? 'bg-red-200' : ''
+                                    }`}>
+                                    {i + 1}
+                                </span>
                                 <div className="flex-1">{line}</div>
                             </div>
                         ))}
@@ -218,7 +230,10 @@ export default function App() {
                     <pre className="whitespace-pre-wrap">
                         {rightLines.map((line, i) => (
                             <div key={i} className="flex">
-                                <span className="w-8 text-gray-400 select-none text-right pr-2">{i + 1}</span>
+                                <span className={`w-8 select-none text-right pr-2 ${rightLineStates[i] === 'added' ? 'bg-green-200' : ''
+                                    }`}>
+                                    {i + 1}
+                                </span>
                                 <div className="flex-1">{line}</div>
                             </div>
                         ))}
