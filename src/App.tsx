@@ -46,6 +46,7 @@ export default function App() {
     const diffTextareaRef = useRef<HTMLTextAreaElement>(null)
     const [rightPaneSelected, setRightPaneSelected] = useState(false)
     const [diffPanelHeight, setDiffPanelHeight] = useState(256)
+    const [aboutOpen, setAboutOpen] = useState(false)
 
     useEffect(() => {
         inputRef.current?.focus()
@@ -274,6 +275,12 @@ export default function App() {
     const headerHeight = '40px'
     return (
         <div className="h-screen flex flex-col bg-gray-900 text-gray-100">
+            <div className="flex items-center justify-between px-4 py-2 border-b border-gray-700">
+                <div className="flex-1 flex justify-center items-center">
+                    <h1 className="text-4xl font-bold">Tootils</h1>
+                </div>
+                <button onClick={() => setAboutOpen(true)}>About</button>
+            </div>
             <div className="flex flex-1">
                 <div className="w-1/2 h-full flex flex-col">
                     <div className="flex shrink-0 items-center border-b border-gray-700" style={{ height: headerHeight }}>
@@ -329,6 +336,25 @@ export default function App() {
                         {renderDiffContent()}
                     </div>
                 </>
+            )}
+            {aboutOpen && (
+                <div
+                    className="absolute top-0 left-0 w-full h-full flex items-center justify-center bg-black bg-opacity-50"
+                    onClick={() => setAboutOpen(false)}
+                >
+                    <div
+                        className="bg-gray-800 p-4 rounded shadow-lg max-w-md"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <p>
+                            A fast, no frills collection of text utilities. This is a purely static webpage, all data is processed locally.
+                            Source code available on <a href="https://github.com/viveksjain/tootils" className="underline">Github</a>.
+                        </p>
+                        <div className="flex justify-end">
+                            <button onClick={() => setAboutOpen(false)} className="mt-2">Close</button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     )
