@@ -26,7 +26,7 @@ function parseNumber(val: string) {
     }
 }
 
-function detectTool(val: string) {
+function detectMode(val: string) {
     const trimmed = val.trim()
     if (trimmed.startsWith('{')) return 'json'
     const numeric = Number(trimmed)
@@ -39,7 +39,7 @@ function detectTool(val: string) {
 }
 
 export default function App() {
-    const [tool, setTool] = useState('')
+    const [mode, setMode] = useState('')
     const [inputA, setInputA] = useState('')
     const [inputB, setInputB] = useState('')
     const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -52,19 +52,19 @@ export default function App() {
     }, [])
 
     useEffect(() => {
-        if (tool === 'diff') {
+        if (mode === 'diff') {
             diffTextareaRef.current?.focus()
             diffTextareaRef.current?.setSelectionRange(diffTextareaRef.current.value.length, diffTextareaRef.current.value.length)
         }
-    }, [tool])
+    }, [mode])
 
     const handleRightPaneKeyDown = async (e: React.KeyboardEvent) => {
         const isPaste = (e.metaKey || e.ctrlKey) && e.key === 'v'
-        if (isPaste && !tool) {
+        if (isPaste && !mode) {
             e.preventDefault()
             try {
                 const text = await navigator.clipboard.readText()
-                setTool('diff')
+                setMode('diff')
                 setInputB(text)
             } catch (err) {
                 console.error('Failed to read clipboard:', err)
@@ -72,18 +72,18 @@ export default function App() {
         }
     }
 
-    function renderPaneByTool(
-        tool: string,
+    function renderPaneByMode(
+        mode: string,
         inputA: string,
         inputB: string,
         setInputB: React.Dispatch<React.SetStateAction<string>>
     ) {
-        if (tool === 'diff') {
+        if (mode === 'diff') {
             return (
                 <div className="h-full flex">
                     <textarea
                         ref={diffTextareaRef}
-                        className="w-full h-full border p-2 resize-none"
+                        className="w-full h-full border p-2 resize-none bg-gray-800 text-gray-100"
                         placeholder="Enter text to compare..."
                         value={inputB}
                         onChange={(e) => setInputB(e.target.value)}
@@ -91,7 +91,7 @@ export default function App() {
                 </div>
             )
         }
-        if (tool === 'json') {
+        if (mode === 'json') {
             try {
                 const pretty = JSON.stringify(JSON.parse(inputA), null, 2)
                 return <pre className="overflow-auto">{pretty}</pre>
@@ -99,7 +99,7 @@ export default function App() {
                 return <div className="text-red-600">Invalid JSON: {err.message}</div>
             }
         }
-        if (tool === 'unix') {
+        if (mode === 'unix') {
             const { local, utc } = parseUnixTime(inputA)
             return (
                 <div>
@@ -108,7 +108,7 @@ export default function App() {
                 </div>
             )
         }
-        if (tool === 'number') {
+        if (mode === 'number') {
             const { decimal, hex, octal, binary, detectedBase } = parseNumber(inputA)
             const grayIf = (base: number) => base === detectedBase ? 'text-gray-400' : ''
             return (
@@ -120,26 +120,26 @@ export default function App() {
                 </div>
             )
         }
-        return (!tool ? <div>No tool auto-detected.</div> : null)
+        return (!mode ? <div>No mode auto-detected.</div> : null)
     }
 
     const renderRightPane = () => {
-        if (!tool) {
+        if (!mode) {
             if (!inputA) {
-                return <div>Please enter some input. We will try to auto-detect the most appropriate tool. Alternatively, you can select a tool from the dropdown above.</div>
+                return <div>Please enter some input. We will try to auto-detect the most appropriate mode. Alternatively, you can select a mode from the dropdown above.</div>
             }
-            const autodetected = detectTool(inputA)
+            const autodetected = detectMode(inputA)
             if (!autodetected) {
-                return <div>No tool auto-detected. Please enter valid input or choose a tool.</div>
+                return <div>No mode auto-detected. Please enter valid input or select a mode.</div>
             }
             return (
                 <>
                     <div>Auto-detected: {autodetected}</div>
-                    {renderPaneByTool(autodetected, inputA, inputB, setInputB)}
+                    {renderPaneByMode(autodetected, inputA, inputB, setInputB)}
                 </>
             )
         }
-        return renderPaneByTool(tool, inputA, inputB, setInputB)
+        return renderPaneByMode(mode, inputA, inputB, setInputB)
     }
 
     const renderDiffContent = () => {
@@ -199,7 +199,7 @@ export default function App() {
             if (op === 0) {
                 return <span key={i}>{text}</span>
             } else if (op === -1) {
-                return <span key={i} className="bg-red-200">{text}</span>
+                return <span key={i} className="bg-red-700">{text}</span>
             } else {
                 return <span key={i}></span>
             }
@@ -210,7 +210,7 @@ export default function App() {
             if (op === 0) {
                 return <span key={i}>{text}</span>
             } else if (op === 1) {
-                return <span key={i} className="bg-green-200">{text}</span>
+                return <span key={i} className="bg-green-700">{text}</span>
             } else {
                 return <span key={i}></span>
             }
@@ -226,7 +226,7 @@ export default function App() {
                     <pre className="whitespace-pre-wrap">
                         {leftLines.map((line, i) => (
                             <div key={i} className="flex">
-                                <span className={`w-8 select-none text-right pr-2 ${leftLineStates[i] === 'removed' ? 'bg-red-200' : ''
+                                <span className={`w-8 select-none text-right pr-2 ${leftLineStates[i] === 'removed' ? 'bg-red-700' : ''
                                     }`}>
                                     {i + 1}
                                 </span>
@@ -240,7 +240,7 @@ export default function App() {
                     <pre className="whitespace-pre-wrap">
                         {rightLines.map((line, i) => (
                             <div key={i} className="flex">
-                                <span className={`w-8 select-none text-right pr-2 ${rightLineStates[i] === 'added' ? 'bg-green-200' : ''
+                                <span className={`w-8 select-none text-right pr-2 ${rightLineStates[i] === 'added' ? 'bg-green-700' : ''
                                     }`}>
                                     {i + 1}
                                 </span>
@@ -273,14 +273,16 @@ export default function App() {
 
     const headerHeight = '40px'
     return (
-        <div className="h-screen flex flex-col">
+        <div className="h-screen flex flex-col bg-gray-900 text-gray-100">
             <div className="flex flex-1">
                 <div className="w-1/2 h-full flex flex-col">
-                    <div className="ml-2 p-2 text-base flex-none" style={{ height: headerHeight }}>Input</div>
+                    <div className="flex shrink-0 items-center border-b border-gray-700" style={{ height: headerHeight }}>
+                        <span className="ml-2 p-2">Input</span>
+                    </div>
                     <div className="p-2 w-full h-full">
                         <textarea
                             ref={inputRef}
-                            className="w-full h-full border p-2 resize-none"
+                            className="w-full h-full border p-2 resize-none bg-gray-800 text-gray-100"
                             placeholder="Enter input..."
                             value={inputA}
                             onChange={(e) => setInputA(e.target.value)}
@@ -288,39 +290,41 @@ export default function App() {
                     </div>
                 </div>
                 <div
-                    className={`w-1/2 h-full flex flex-col border-l ${rightPaneSelected ? 'ring-2 ring-blue-500' : ''}`}
+                    className={`w-1/2 h-full flex flex-col border-l border-gray-700 ${rightPaneSelected ? 'ring-2 ring-blue-500' : ''}`}
                     tabIndex={0}
                     onFocus={() => setRightPaneSelected(true)}
                     onBlur={() => setRightPaneSelected(false)}
                     onKeyDown={handleRightPaneKeyDown}
                 >
-                    <select
-                        className="p-2"
-                        style={{ height: headerHeight }}
-                        value={tool}
-                        onChange={(e) => setTool(e.target.value)}
-                    >
-                        <option value="">Autodetect</option>
-                        <option value="diff">Text diff</option>
-                        <option value="json">JSON pretty print</option>
-                        <option value="unix">Unix epoch time</option>
-                        <option value="number">Number conversion</option>
-                    </select>
+                    <div className="flex items-center h-full border-b border-gray-700" style={{ height: headerHeight }}>
+                        <span className="ml-2 p-2">Mode</span>
+                        <select
+                            className="p-2 bg-gray-800 text-gray-100"
+                            value={mode}
+                            onChange={(e) => setMode(e.target.value)}
+                        >
+                            <option value="">Autodetect</option>
+                            <option value="diff">Text diff</option>
+                            <option value="json">JSON pretty print</option>
+                            <option value="unix">Unix epoch time</option>
+                            <option value="number">Number conversion</option>
+                        </select>
+                    </div>
                     <div className="flex-1 overflow-auto p-2">
                         {renderRightPane()}
                     </div>
                 </div>
             </div>
-            {tool === 'diff' && (
+            {mode === 'diff' && (
                 <>
                     <div
                         onMouseDown={handleDiffPanelResizeMouseDown}
-                        className="bg-gray-300 cursor-row-resize"
+                        className="bg-gray-700 cursor-row-resize"
                         style={{ height: '6px' }}
                     />
                     <div
                         style={{ height: diffPanelHeight }}
-                        className="border-t p-2 overflow-auto font-mono"
+                        className="border-t border-gray-700 p-2 overflow-auto font-mono"
                     >
                         {renderDiffContent()}
                     </div>
