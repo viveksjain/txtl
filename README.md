@@ -2,7 +2,7 @@
 
 A fast, no frills collection of text utilities (t-utils, thus tootils). Generates a purely static webpage, all data is processed locally.
 
-Check it out at https://tootils.vivekja.in
+Check it out at https://viveksjain.github.io/tootils/
 
 ## Features
 
