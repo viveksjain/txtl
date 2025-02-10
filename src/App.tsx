@@ -59,12 +59,11 @@ export default function App() {
         }
     }, [mode])
 
-    const handleRightPaneKeyDown = async (e: React.KeyboardEvent) => {
-        const isPaste = (e.metaKey || e.ctrlKey) && e.key === 'v'
-        if (isPaste && !mode) {
+    const handleRightPanePaste = async (e: React.ClipboardEvent) => {
+        if (!mode) {
             e.preventDefault()
             try {
-                const text = await navigator.clipboard.readText()
+                const text = e.clipboardData.getData('text')
                 setMode('diff')
                 setInputB(text)
             } catch (err) {
@@ -301,7 +300,7 @@ export default function App() {
                     tabIndex={0}
                     onFocus={() => setRightPaneSelected(true)}
                     onBlur={() => setRightPaneSelected(false)}
-                    onKeyDown={handleRightPaneKeyDown}
+                    onPaste={handleRightPanePaste}
                 >
                     <div className="flex items-center h-full border-b border-gray-700" style={{ height: headerHeight }}>
                         <span className="ml-2 p-2">Mode</span>
