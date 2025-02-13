@@ -35,6 +35,12 @@ function detectMode(val: string) {
         if (numeric >= 1000000000 && numeric <= 2500000000) return 'unix'
         return 'number'
     }
+    try {
+        new URL(trimmed)
+        return 'urlendecode'
+    } catch {
+        // Not a valid URL
+    }
     return ''
 }
 
@@ -119,6 +125,23 @@ export default function App() {
                     <div className={grayIf(2)}>Binary: {binary}</div>
                 </div>
             )
+        }
+        if (mode === 'urlendecode') {
+            try {
+                const encoded = encodeURIComponent(inputA)
+                const decoded = decodeURIComponent(inputA)
+                return (
+                    <div>
+                        <div>Encoded:</div>
+                        <div>{encoded}</div>
+                        <div className="my-4 border-t border-gray-500"></div>
+                        <div>Decoded:</div>
+                        <div>{decoded}</div>
+                    </div>
+                )
+            } catch (err) {
+                return <div className="text-red-600">Invalid URL: {err.message}</div>
+            }
         }
         return (!mode ? <div>No mode auto-detected.</div> : null)
     }
@@ -314,6 +337,7 @@ export default function App() {
                             <option value="json">JSON pretty print</option>
                             <option value="unix">Unix epoch time</option>
                             <option value="number">Number conversion</option>
+                            <option value="urlendecode">URL decode/encode</option>
                         </select>
                     </div>
                     <div className="flex-1 overflow-auto p-2">
