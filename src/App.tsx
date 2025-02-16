@@ -299,7 +299,7 @@ export default function App() {
         <div className="h-screen flex flex-col bg-gray-900 text-gray-100">
             <div className="flex items-center justify-between px-4 py-2 border-b border-gray-700">
                 <div className="flex-1 flex justify-center items-center">
-                    <h1 className="text-4xl font-bold">Tootils</h1>
+                    <h1 className="text-4xl font-bold">txtl</h1>
                 </div>
                 <button onClick={() => setAboutOpen(true)}>About</button>
             </div>
@@ -371,7 +371,7 @@ export default function App() {
                     >
                         <p>
                             A fast, no frills collection of text utilities. This is a purely static webpage, all data is processed locally.
-                            Source code available on <a href="https://github.com/viveksjain/tootils" className="underline">Github</a>.
+                            Source code available on <a href="https://github.com/viveksjain/txtl" className="underline">Github</a>.
                         </p>
                         <div className="flex justify-end">
                             <button onClick={() => setAboutOpen(false)} className="mt-2">Close</button>

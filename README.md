@@ -1,8 +1,8 @@
-# Tootils
+# txtl
 
-A fast, no frills collection of text utilities (t-utils, thus tootils). Generates a purely static webpage, all data is processed locally.
+A fast, no frills collection of TeXt uTiLities (thus txtl). Generates a purely static webpage, all data is processed locally.
 
-Check it out at https://viveksjain.github.io/tootils/
+Check it out at https://viveksjain.github.io/txtl/
 
 ## Features
 
