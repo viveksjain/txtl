@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { diff_match_patch } from 'diff-match-patch'
 
 function parseUnixTime(val: string) {
@@ -165,22 +165,24 @@ export default function App() {
         return renderPaneByMode(mode, inputA, inputB, setInputB)
     }
 
-    function renderDiffContent() {
+    const diffContent = useMemo(() => {
+        if (mode !== 'diff') return null;
         const dmp = new diff_match_patch()
         const diffs = dmp.diff_main(inputA, inputB)
         dmp.diff_cleanupSemantic(diffs)
 
         class DiffSpan {
             content: string;
-            state: 'added' | 'removed' | 'unchanged';
+            state: 'added' | 'removed' | 'unchanged' | 'spacer';
 
-            constructor(content: string, state: 'added' | 'removed' | 'unchanged') {
+            constructor(content: string, state: 'added' | 'removed' | 'unchanged' | 'spacer') {
                 this.content = content;
                 this.state = state;
             }
         }
         class DiffLine {
             spans: DiffSpan[];
+            showNextLineNumber?: boolean;
             lineNumber?: number;
 
             constructor() {
@@ -202,17 +204,23 @@ export default function App() {
                 return this.lines[this.lines.length - 1];
             }
 
-            addLine() {
+            addLine(showLineNumber: boolean) {
+                this.last().showNextLineNumber = showLineNumber;
+                if (!showLineNumber) {
+                    this.last().spans.push(new DiffSpan('\n', 'spacer'));
+                }
                 this.lines.push(new DiffLine());
             }
 
             computeLineNumbers() {
-                let lineNumber = 1;
+                let lineNumber = 1
+                let showNextLineNumber = true
                 this.lines.forEach((line) => {
-                    if (line.spans.length !== 0) {
-                        line.lineNumber = lineNumber;
-                        lineNumber++;
+                    if (showNextLineNumber) {
+                        line.lineNumber = lineNumber
+                        lineNumber++
                     }
+                    showNextLineNumber = line.showNextLineNumber ?? false
                 });
             }
         }
@@ -221,84 +229,77 @@ export default function App() {
         let rightContent = new Content()
         diffs.map((diff, _) => {
             const [op, text] = diff
-            text.split('\n').forEach((spanText, i) => {
-                if (i > 0) {
-                    leftContent.addLine()
-                    rightContent.addLine()
-                }
-
+            const lines = text.split(/(?<=\n)/);
+            lines.forEach((spanText, _) => {
                 if (op === 0) {
-                    // TODO we should try to distinguish between newline unchanged and newline added/removed
-                    if (spanText !== '') {
-                        leftContent.last().addSpan(new DiffSpan(spanText, 'unchanged'))
-                        rightContent.last().addSpan(new DiffSpan(spanText, 'unchanged'))
-                    }
+                    leftContent.last().addSpan(new DiffSpan(spanText, 'unchanged'))
+                    rightContent.last().addSpan(new DiffSpan(spanText, 'unchanged'))
                 } else if (op === 1) {
                     rightContent.last().addSpan(new DiffSpan(spanText, 'added'))
                 } else {
                     leftContent.last().addSpan(new DiffSpan(spanText, 'removed'))
                 }
+
+                if (spanText.endsWith('\n')) {
+                    if (op === 0) {
+                        leftContent.addLine(true)
+                        rightContent.addLine(true)
+                    } else if (op === 1) {
+                        leftContent.addLine(false)
+                        rightContent.addLine(true)
+                    } else {
+                        leftContent.addLine(true)
+                        rightContent.addLine(false)
+                    }
+                }
             })
         })
         leftContent.computeLineNumbers()
         rightContent.computeLineNumbers()
-        console.log(leftContent, rightContent)
 
         return (
             <div className="flex">
                 <div className="w-1/2 border-r">
                     <div className="p-2 text-sm text-gray-500 border-b mb-1">Original</div>
-                    <pre className="whitespace-pre-wrap p-2">
-                        {leftContent.lines.map((line, i) => (
-                            <div key={i} className="flex">
-                                <span className="w-8 select-none text-right pr-2">
-                                    {line.lineNumber || '\u00A0'}
-                                </span>
-                                <div className="flex-1">
-                                    {line.spans.map((span, j) => (
-                                        <span
-                                            key={`${i}-${j}`}
-                                            className={
-                                                span.state === 'added' ? 'bg-green-700' :
-                                                    span.state === 'removed' ? 'bg-red-700' : ''
-                                            }
-                                        >
-                                            {span.content}
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
-                    </pre>
+                    {renderContent(leftContent)}
                 </div>
                 <div className="w-1/2">
                     <div className="p-2 text-sm text-gray-500 border-b mb-1">Modified</div>
-                    <pre className="whitespace-pre-wrap p-2">
-                        {rightContent.lines.map((line, i) => (
-                            <div key={i} className="flex">
-                                <span className="w-8 select-none text-right pr-2">
-                                    {line.lineNumber || '\u00A0'}
-                                </span>
-                                <div className="flex-1">
-                                    {line.spans.map((span, j) => (
-                                        <span
-                                            key={`${i}-${j}`}
-                                            className={
-                                                span.state === 'added' ? 'bg-green-700' :
-                                                    span.state === 'removed' ? 'bg-red-700' : ''
-                                            }
-                                        >
-                                            {span.content}
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
-                    </pre>
+                    {renderContent(rightContent)}
                 </div>
             </div>
         )
-    }
+
+        function renderContent(content: Content) {
+            return <pre className="whitespace-pre-wrap p-2">
+                {content.lines.map((line, _) => (
+                    <div className="flex">
+                        <span className="w-8 select-none text-right pr-2">
+                            {line.lineNumber || '\u00A0'}
+                        </span>
+                        <div className="flex-1 flex">
+                            {line.spans.map((span, _) => (
+                                <>
+                                    <span
+                                        className={span.state === 'added' ? 'bg-green-700' :
+                                            span.state === 'removed' ? 'bg-red-700' : ''}
+                                    >
+                                        {span.content}
+                                    </span>
+                                    {span.content.endsWith('\n') && (
+                                        <span
+                                            className={`flex-1 ${span.state === 'added' ? 'bg-green-700' :
+                                                span.state === 'removed' ? 'bg-red-700' :
+                                                    span.state === 'spacer' ? 'bg-gray-600' : ''}`} />
+                                    )}
+                                </>
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </pre>
+        }
+    }, [inputA, inputB, mode])
 
     const handleDiffPanelResizeMouseDown = (
         e: React.MouseEvent<HTMLDivElement>
@@ -380,7 +381,7 @@ export default function App() {
                         style={{ height: diffPanelHeight }}
                         className="border-t border-gray-700 overflow-auto font-mono"
                     >
-                        {renderDiffContent()}
+                        {diffContent}
                     </div>
                 </>
             )}
