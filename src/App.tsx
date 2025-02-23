@@ -172,21 +172,25 @@ export default function App() {
         dmp.diff_cleanupSemantic(diffs)
 
         class DiffSpan {
+            uuid: string;
             content: string;
             state: 'added' | 'removed' | 'unchanged' | 'spacer';
 
             constructor(content: string, state: 'added' | 'removed' | 'unchanged' | 'spacer') {
+                this.uuid = crypto.randomUUID();
                 this.content = content;
                 this.state = state;
             }
         }
         class DiffLine {
+            uuid: string;
             spans: DiffSpan[];
             showNextLineNumber?: boolean;
             lineNumber?: number;
 
             constructor() {
                 this.spans = [];
+                this.uuid = crypto.randomUUID();
             }
 
             addSpan(span: DiffSpan) {
@@ -273,13 +277,13 @@ export default function App() {
         function renderContent(content: Content) {
             return <pre className="whitespace-pre-wrap p-2">
                 {content.lines.map((line, _) => (
-                    <div className="flex">
+                    <div key={line.uuid} className="flex">
                         <span className="w-8 select-none text-right pr-2">
                             {line.lineNumber || '\u00A0'}
                         </span>
                         <div className="flex-1 flex">
                             {line.spans.map((span, _) => (
-                                <>
+                                <React.Fragment key={span.uuid}>
                                     <span
                                         className={span.state === 'added' ? 'bg-green-700' :
                                             span.state === 'removed' ? 'bg-red-700' : ''}
@@ -292,7 +296,7 @@ export default function App() {
                                                 span.state === 'removed' ? 'bg-red-700' :
                                                     span.state === 'spacer' ? 'bg-gray-600' : ''}`} />
                                     )}
-                                </>
+                                </React.Fragment>
                             ))}
                         </div>
                     </div>
