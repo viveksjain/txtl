@@ -165,109 +165,133 @@ export default function App() {
         return renderPaneByMode(mode, inputA, inputB, setInputB)
     }
 
-    const renderDiffContent = () => {
+    function renderDiffContent() {
         const dmp = new diff_match_patch()
         const diffs = dmp.diff_main(inputA, inputB)
         dmp.diff_cleanupSemantic(diffs)
 
-        const splitIntoLines = (content: React.ReactNode[]) => {
-            let lineNumber = 1
-            // Track if line was modified
-            const lineStates: ('added' | 'removed' | 'unchanged')[] = []
-            const lines: React.ReactNode[][] = [[]]
+        class DiffSpan {
+            content: string;
+            state: 'added' | 'removed' | 'unchanged';
 
-            content.forEach((node, nodeIndex) => {
-                if (typeof node === 'string') {
-                    const textLines = node.split('\n')
-                    textLines.forEach((line, i) => {
-                        if (i > 0) {
-                            lines.push([])
-                            lineNumber++
-                            lineStates.push('unchanged')
-                        }
-                        if (line) lines[lines.length - 1].push(line)
-                    })
-                } else if (node && typeof node === 'object' && 'props' in node) {
-                    const text = (node as React.ReactElement).props.children
-                    if (text !== undefined) {
-                        const textLines = text.split('\n')
-                        const isAddition = (node as React.ReactElement).props.className?.includes('green')
-                        const isRemoval = (node as React.ReactElement).props.className?.includes('red')
+            constructor(content: string, state: 'added' | 'removed' | 'unchanged') {
+                this.content = content;
+                this.state = state;
+            }
+        }
+        class DiffLine {
+            spans: DiffSpan[];
+            lineNumber?: number;
 
-                        textLines.forEach((line: string, i: number) => {
-                            if (i > 0) {
-                                lines.push([])
-                                lineNumber++
-                                lineStates.push(isAddition ? 'added' : isRemoval ? 'removed' : 'unchanged')
-                            } else {
-                                lineStates.push(isAddition ? 'added' : isRemoval ? 'removed' : 'unchanged')
-                            }
-                            if (line) {
-                                lines[lines.length - 1].push(
-                                    React.cloneElement(node as React.ReactElement, {
-                                        key: `${lineNumber}-${i}-${nodeIndex}`,
-                                        children: line
-                                    })
-                                )
-                            }
-                        })
+            constructor() {
+                this.spans = [];
+            }
+
+            addSpan(span: DiffSpan) {
+                this.spans.push(span);
+            }
+        }
+        class Content {
+            lines: DiffLine[];
+
+            constructor() {
+                this.lines = [new DiffLine()];
+            }
+
+            last() {
+                return this.lines[this.lines.length - 1];
+            }
+
+            addLine() {
+                this.lines.push(new DiffLine());
+            }
+
+            computeLineNumbers() {
+                let lineNumber = 1;
+                this.lines.forEach((line) => {
+                    if (line.spans.length !== 0) {
+                        line.lineNumber = lineNumber;
+                        lineNumber++;
                     }
-                }
-            })
-            return { lines, lineStates }
+                });
+            }
         }
 
-        const leftContent = diffs.map((diff, i) => {
+        let leftContent = new Content()
+        let rightContent = new Content()
+        diffs.map((diff, _) => {
             const [op, text] = diff
-            if (op === 0) {
-                return <span key={i}>{text}</span>
-            } else if (op === -1) {
-                return <span key={i} className="bg-red-700">{text}</span>
-            } else {
-                return <span key={i}></span>
-            }
-        })
+            text.split('\n').forEach((spanText, i) => {
+                if (i > 0) {
+                    leftContent.addLine()
+                    rightContent.addLine()
+                }
 
-        const rightContent = diffs.map((diff, i) => {
-            const [op, text] = diff
-            if (op === 0) {
-                return <span key={i}>{text}</span>
-            } else if (op === 1) {
-                return <span key={i} className="bg-green-700">{text}</span>
-            } else {
-                return <span key={i}></span>
-            }
+                if (op === 0) {
+                    // TODO we should try to distinguish between newline unchanged and newline added/removed
+                    if (spanText !== '') {
+                        leftContent.last().addSpan(new DiffSpan(spanText, 'unchanged'))
+                        rightContent.last().addSpan(new DiffSpan(spanText, 'unchanged'))
+                    }
+                } else if (op === 1) {
+                    rightContent.last().addSpan(new DiffSpan(spanText, 'added'))
+                } else {
+                    leftContent.last().addSpan(new DiffSpan(spanText, 'removed'))
+                }
+            })
         })
-
-        const { lines: leftLines, lineStates: leftLineStates } = splitIntoLines(leftContent)
-        const { lines: rightLines, lineStates: rightLineStates } = splitIntoLines(rightContent)
+        leftContent.computeLineNumbers()
+        rightContent.computeLineNumbers()
+        console.log(leftContent, rightContent)
 
         return (
             <div className="flex">
                 <div className="w-1/2 border-r">
-                    <div className="text-sm text-gray-500 border-b mb-1">Original</div>
-                    <pre className="whitespace-pre-wrap">
-                        {leftLines.map((line, i) => (
+                    <div className="p-2 text-sm text-gray-500 border-b mb-1">Original</div>
+                    <pre className="whitespace-pre-wrap p-2">
+                        {leftContent.lines.map((line, i) => (
                             <div key={i} className="flex">
-                                <span className={`w-8 select-none text-right pr-2 ${leftLineStates[i] === 'removed' ? 'bg-red-700' : ''
-                                    }`}>
-                                    {i + 1}
+                                <span className="w-8 select-none text-right pr-2">
+                                    {line.lineNumber || '\u00A0'}
                                 </span>
-                                <div className="flex-1">{line}</div>
+                                <div className="flex-1">
+                                    {line.spans.map((span, j) => (
+                                        <span
+                                            key={`${i}-${j}`}
+                                            className={
+                                                span.state === 'added' ? 'bg-green-700' :
+                                                    span.state === 'removed' ? 'bg-red-700' : ''
+                                            }
+                                        >
+                                            {span.content}
+                                        </span>
+                                    ))}
+                                </div>
                             </div>
                         ))}
                     </pre>
                 </div>
-                <div className="w-1/2 pl-2">
-                    <div className="text-sm text-gray-500 border-b mb-1">Modified</div>
-                    <pre className="whitespace-pre-wrap">
-                        {rightLines.map((line, i) => (
+                <div className="w-1/2">
+                    <div className="p-2 text-sm text-gray-500 border-b mb-1">Modified</div>
+                    <pre className="whitespace-pre-wrap p-2">
+                        {rightContent.lines.map((line, i) => (
                             <div key={i} className="flex">
-                                <span className={`w-8 select-none text-right pr-2 ${rightLineStates[i] === 'added' ? 'bg-green-700' : ''
-                                    }`}>
-                                    {i + 1}
+                                <span className="w-8 select-none text-right pr-2">
+                                    {line.lineNumber || '\u00A0'}
                                 </span>
-                                <div className="flex-1">{line}</div>
+                                <div className="flex-1">
+                                    {line.spans.map((span, j) => (
+                                        <span
+                                            key={`${i}-${j}`}
+                                            className={
+                                                span.state === 'added' ? 'bg-green-700' :
+                                                    span.state === 'removed' ? 'bg-red-700' : ''
+                                            }
+                                        >
+                                            {span.content}
+                                        </span>
+                                    ))}
+                                </div>
                             </div>
                         ))}
                     </pre>
@@ -354,7 +378,7 @@ export default function App() {
                     />
                     <div
                         style={{ height: diffPanelHeight }}
-                        className="border-t border-gray-700 p-2 overflow-auto font-mono"
+                        className="border-t border-gray-700 overflow-auto font-mono"
                     >
                         {renderDiffContent()}
                     </div>
