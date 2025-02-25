@@ -13,6 +13,7 @@ https://github.com/user-attachments/assets/6f9ba70e-108e-4a5c-970f-2112d6c9e6a3
  - JSON pretty print
  - Unix epoch time parsing (supports seconds and milliseconds since epoch)
  - Number conversion between decimal, hex, octal and binary (to convert from the latter three, start your number with 0x, 0o or 0b, respectively)
+ - URL encoding/decoding
 
 ## Development
 
