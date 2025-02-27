@@ -132,21 +132,22 @@ export default function App() {
             )
         }
         if (mode === 'urlendecode') {
+            const encoded = encodeURIComponent(inputA)
+            let decoded: JSX.Element
             try {
-                const encoded = encodeURIComponent(inputA)
-                const decoded = decodeURIComponent(inputA)
-                return (
-                    <div>
-                        <div>Encoded:</div>
-                        <div>{encoded}</div>
-                        <div className="my-4 border-t border-gray-500"></div>
-                        <div>Decoded:</div>
-                        <div>{decoded}</div>
-                    </div>
-                )
+                decoded = <div>{decodeURIComponent(inputA)}</div>
             } catch (err) {
-                return <div className="text-red-600">Invalid URL: {err.message}</div>
+                decoded = <div className="text-red-600">Invalid URI component: {err.message}</div>
             }
+            return (
+                <div>
+                    <div>Encoded:</div>
+                    <div>{encoded}</div>
+                    <div className="my-4 border-t border-gray-500"></div>
+                    <div>Decoded:</div>
+                    {decoded}
+                </div>
+            )
         }
         if (mode === 'base64') {
             let decoded: JSX.Element
