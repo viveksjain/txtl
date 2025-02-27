@@ -1,8 +1,22 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { diff_match_patch } from 'diff-match-patch'
 
+function isMaybeEpochTime(val: number) {
+    // Roughly, represents seconds since epoch from 2001 to 2049. We auto-detect this range as unix time.
+    const inAllowedRange = (num: number): boolean => num >= 1000000000 && num <= 2500000000;
+    if (inAllowedRange(val)) {
+        return true;
+    }
+    // Try as milliseconds since epoch
+    if (inAllowedRange(val / 1000)) {
+        return true;
+    }
+    return false;
+}
+
 function parseUnixTime(val: string) {
     const n = Number(val)
+    // Autodetect if in seconds or milliseconds, convert seconds if needed.
     let epoch = n > 100000000000 ? n : n * 1000
     let date = new Date(epoch)
     return {
@@ -31,8 +45,7 @@ function detectMode(val: string) {
     if (trimmed.startsWith('{')) return 'json'
     const numeric = Number(trimmed)
     if (!isNaN(numeric)) {
-        // Roughly, represents seconds since epoch from 2001 to 2049. We auto-detect as unix time.
-        if (numeric >= 1000000000 && numeric <= 2500000000) return 'unix'
+        if (isMaybeEpochTime(numeric)) return 'unix'
         return 'number'
     }
     try {
