@@ -41,6 +41,11 @@ function detectMode(val: string) {
     } catch {
         // Not a valid URL
     }
+    // Thanks to https://github.com/gchq/CyberChef/wiki/Automatic-detection-of-encoded-data-using-CyberChef-Magic#pattern-matching
+    const base64Regex = /^(?:[A-Z\d+/]{4})+(?:[A-Z\d+/]{2}==|[A-Z\d+/]{3}=)?$/i
+    if (base64Regex.test(trimmed)) {
+        return 'base64'
+    }
     return ''
 }
 
@@ -142,6 +147,24 @@ export default function App() {
             } catch (err) {
                 return <div className="text-red-600">Invalid URL: {err.message}</div>
             }
+        }
+        if (mode === 'base64') {
+            let decoded: JSX.Element
+            try {
+                decoded = <div className="bg-gray-700 p-2 my-2 rounded whitespace-pre-wrap">{atob(inputA)}</div>
+            } catch (err) {
+                decoded = <div className="text-red-600">Invalid Base64: {err.message}</div>
+            }
+            const encoded = btoa(inputA)
+            return (
+                <div>
+                    <div>Encoded:</div>
+                    <div className="bg-gray-700 p-2 my-2 rounded break-all">{encoded}</div>
+                    <div className="my-4 border-t border-gray-500"></div>
+                    <div>Decoded:</div>
+                    {decoded}
+                </div>
+            )
         }
         return (!mode ? <div>No mode auto-detected.</div> : null)
     }
@@ -366,7 +389,8 @@ export default function App() {
                             <option value="json">JSON pretty print</option>
                             <option value="unix">Unix epoch time</option>
                             <option value="number">Number conversion</option>
-                            <option value="urlendecode">URL decode/encode</option>
+                            <option value="urlendecode">URL encode/decode</option>
+                            <option value="base64">Base64 encode/decode</option>
                         </select>
                     </div>
                     <div className="flex-1 overflow-auto p-2">
