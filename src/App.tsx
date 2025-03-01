@@ -233,6 +233,10 @@ export default function App() {
             addSpan(span: DiffSpan) {
                 this.spans.push(span);
             }
+
+            lastSpan() {
+                return this.spans[this.spans.length - 1];
+            }
         }
         class Content {
             lines: DiffLine[];
@@ -318,23 +322,24 @@ export default function App() {
                         <span className="w-8 select-none text-right pr-2">
                             {line.lineNumber || '\u00A0'}
                         </span>
-                        <div className="flex-1 flex">
-                            {line.spans.map((span, _) => (
-                                <React.Fragment key={span.uuid}>
-                                    <span
+                        <div className="flex-1 flex" style={{ overflowWrap: 'anywhere' }}>
+                            <div>
+                                {line.spans.map((span, _) => (
+                                    <span key={span.uuid}
                                         className={span.state === 'added' ? 'bg-green-700' :
                                             span.state === 'removed' ? 'bg-red-700' : ''}
                                     >
                                         {span.content}
                                     </span>
-                                    {span.content.endsWith('\n') && (
-                                        <span
-                                            className={`flex-1 ${span.state === 'added' ? 'bg-green-700' :
-                                                span.state === 'removed' ? 'bg-red-700' :
-                                                    span.state === 'spacer' ? 'bg-gray-600' : ''}`} />
-                                    )}
-                                </React.Fragment>
-                            ))}
+                                ))}
+                            </div>
+
+                            {line.lastSpan().content.endsWith('\n') && (
+                                <span
+                                    className={`flex-1 ${line.lastSpan().state === 'added' ? 'bg-green-700' :
+                                        line.lastSpan().state === 'removed' ? 'bg-red-700' :
+                                            line.lastSpan().state === 'spacer' ? 'bg-gray-600' : ''}`} />
+                            )}
                         </div>
                     </div>
                 ))}
