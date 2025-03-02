@@ -1,0 +1,10 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- Single background rectangle -->
+  <rect x="6" y="6" width="116" height="116" rx="8" fill="#2d3436"/>
+
+  <!-- Overlapping letters -->
+  <text x="15" y="58" font-family="monospace" font-size="65" font-weight="bold" fill="#d3d3d3">t</text>
+  <text x="55" y="58" font-family="monospace" font-size="65" font-weight="bold" fill="#ff5252" opacity="0.9">x</text>
+  <text x="35" y="108" font-family="monospace" font-size="65" font-weight="bold" fill="#d3d3d3" opacity="0.9">t</text>
+  <text x="75" y="108" font-family="monospace" font-size="65" font-weight="bold" fill="#00b894" opacity="0.9">l</text>
+</svg>
