@@ -372,7 +372,17 @@ export default function App() {
                 <div className="flex-1 flex justify-center items-center">
                     <h1 className="text-4xl font-bold">txtl</h1>
                 </div>
-                <button onClick={() => setAboutOpen(true)}>About</button>
+                <div className="flex space-x-4">
+                    <a
+                        href="https://github.com/viveksjain/txtl"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:underline"
+                    >
+                        GitHub
+                    </a>
+                    <button className="hover:underline" onClick={() => setAboutOpen(true)}>About</button>
+                </div>
             </div>
             <div className="flex flex-1">
                 <div className="w-1/2 h-full flex flex-col">
