@@ -235,6 +235,7 @@ export default function App() {
             }
 
             lastSpan() {
+                if (this.spans.length === 0) return undefined;
                 return this.spans[this.spans.length - 1];
             }
         }
@@ -334,11 +335,11 @@ export default function App() {
                                 ))}
                             </div>
 
-                            {line.lastSpan().content.endsWith('\n') && (
+                            {line.lastSpan()?.content.endsWith('\n') && (
                                 <span
-                                    className={`flex-1 ${line.lastSpan().state === 'added' ? 'bg-green-700' :
-                                        line.lastSpan().state === 'removed' ? 'bg-red-700' :
-                                            line.lastSpan().state === 'spacer' ? 'bg-gray-600' : ''}`} />
+                                    className={`flex-1 ${line.lastSpan()?.state === 'added' ? 'bg-green-700' :
+                                        line.lastSpan()?.state === 'removed' ? 'bg-red-700' :
+                                            line.lastSpan()?.state === 'spacer' ? 'bg-gray-600' : ''}`} />
                             )}
                         </div>
                     </div>
