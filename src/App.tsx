@@ -118,7 +118,7 @@ export default function App() {
         if (mode === 'json') {
             try {
                 const pretty = JSON.stringify(JSON.parse(inputA), null, 2)
-                return <pre className="overflow-auto">{pretty}</pre>
+                return <pre>{pretty}</pre>
             } catch (err) {
                 return <div className="text-red-600">Invalid JSON: {err.message}</div>
             }
@@ -406,7 +406,7 @@ export default function App() {
                     onBlur={() => setRightPaneSelected(false)}
                     onPaste={handleRightPanePaste}
                 >
-                    <div className="flex items-center h-full border-b border-gray-700" style={{ height: headerHeight }}>
+                    <div className="flex items-center border-b border-gray-700" style={{ height: headerHeight }}>
                         <span className="ml-2 p-2">Mode</span>
                         <select
                             className="p-2 bg-gray-800 text-gray-100"
@@ -422,7 +422,7 @@ export default function App() {
                             <option value="base64">Base64 encode/decode</option>
                         </select>
                     </div>
-                    <div className="flex-1 overflow-auto p-2">
+                    <div className="h-full overflow-auto p-2" style={{ flex: "1 1 0" }}>
                         {renderRightPane()}
                     </div>
                 </div>
