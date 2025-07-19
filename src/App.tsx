@@ -108,7 +108,7 @@ export default function App() {
                 <div className="h-full flex p-4">
                     <textarea
                         ref={diffTextareaRef}
-                        className="w-full h-full border border-gray-600 rounded-lg p-4 resize-none bg-gray-800 text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        className="w-full h-full border border-purple-600/40 rounded-lg p-4 resize-none bg-gray-800/80 text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
                         placeholder="Enter text to compare..."
                         value={inputB}
                         onChange={(e) => setInputB(e.target.value)}
@@ -187,15 +187,15 @@ export default function App() {
     const renderRightPane = () => {
         if (!mode) {
             if (!inputA) {
-                return <div className="text-gray-400 text-center">Please enter some input. We will try to auto-detect the most appropriate mode. Alternatively, you can select a mode from the dropdown above.</div>
+                return <div className="text-gray-300 text-center">Please enter some input. We will try to auto-detect the most appropriate mode. Alternatively, you can select a mode from the dropdown above.</div>
             }
             const autodetected = detectMode(inputA)
             if (!autodetected) {
-                return <div className="text-gray-400 text-center">No mode auto-detected. Please enter valid input or select a mode.</div>
+                return <div className="text-gray-300 text-center">No mode auto-detected. Please enter valid input or select a mode.</div>
             }
             return (
                 <>
-                    <div className="text-blue-400 font-medium mb-3">Auto-detected: {autodetected}</div>
+                    <div className="font-medium mb-3" style={{ color: '#cc9cfc' }}>Auto-detected: {autodetected}</div>
                     {renderPaneByMode(autodetected, inputA, inputB, setInputB)}
                 </>
             )
@@ -324,7 +324,7 @@ export default function App() {
                     return (
                         <div
                             key={line.uuid}
-                            className={`flex transition-colors duration-150 leading-5 min-h-5 ${isHovered ? 'bg-blue-600/20' : 'hover:bg-gray-700/30'
+                            className={`flex transition-colors duration-150 leading-5 min-h-5 ${isHovered ? 'bg-purple-600/20' : 'hover:bg-gray-700/30'
                                 }`}
                             onMouseEnter={() => setHoveredLineId(`${index}`)}
                             onMouseLeave={() => setHoveredLineId(null)}
@@ -378,8 +378,8 @@ export default function App() {
 
     const headerHeight = '40px'
     return (
-        <div className="h-screen flex flex-col bg-gray-900 text-gray-100">
-            <div className="relative flex items-center justify-center px-6 py-4 border-b border-gray-700 bg-gray-800/50">
+        <div className="h-screen flex flex-col text-gray-100" style={{ background: 'linear-gradient(135deg, #070a13 0%, #100713 50%, #070a13 100%)' }}>
+            <div className="relative flex items-center justify-center px-6 py-4 border-b border-purple-700/30 bg-gray-800/50 backdrop-blur-sm">
                 <div className="flex flex-col justify-center items-center gap-1">
                     <h1 className="text-4xl font-bold font-mono">
                         <span style={{ color: '#d3d3d3' }}>t</span>
@@ -404,15 +404,15 @@ export default function App() {
                     <button className="text-gray-300 hover:text-white hover:underline transition-colors duration-200" onClick={() => setAboutOpen(true)}>About</button>
                 </div>
             </div>
-            <div className="flex flex-1">
+            <div className="flex flex-1" style={{ background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.08) 0%, rgba(33, 0, 57, 0.18) 50%, rgba(0, 0, 0, 0.08) 100%)' }}>
                 <div className="w-1/2 h-full flex flex-col">
-                    <div className="flex shrink-0 items-center border-b border-gray-700" style={{ height: headerHeight }}>
+                    <div className="flex shrink-0 items-center border-b border-purple-700/30" style={{ height: headerHeight }}>
                         <span className="ml-2 p-2">Input</span>
                     </div>
                     <div className="p-4 w-full h-full">
                         <textarea
                             ref={inputRef}
-                            className="w-full h-full border border-gray-600 rounded-lg p-4 resize-none bg-gray-800 text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                            className="w-full h-full border border-purple-600/40 rounded-lg p-4 resize-none bg-gray-800/70 text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
                             placeholder="Enter input..."
                             value={inputA}
                             onChange={(e) => setInputA(e.target.value)}
@@ -420,16 +420,16 @@ export default function App() {
                     </div>
                 </div>
                 <div
-                    className={`w-1/2 h-full flex flex-col border-l border-gray-700 ${rightPaneSelected ? 'ring-2 ring-blue-500' : ''}`}
+                    className={`w-1/2 h-full flex flex-col border-l border-purple-700/30 ${rightPaneSelected ? 'ring-2 ring-purple-500' : ''}`}
                     tabIndex={0}
                     onFocus={() => setRightPaneSelected(true)}
                     onBlur={() => setRightPaneSelected(false)}
                     onPaste={handleRightPanePaste}
                 >
-                    <div className="flex items-center border-b border-gray-700" style={{ height: headerHeight }}>
+                    <div className="flex items-center border-b border-purple-700/30" style={{ height: headerHeight }}>
                         <span className="ml-2 p-2">Mode</span>
                         <select
-                            className="p-2 ml-4 bg-gray-800 text-gray-100 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                            className="p-2 ml-4 bg-gray-800/80 text-gray-100 border border-purple-600/40 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
                             value={mode}
                             onChange={(e) => setMode(e.target.value)}
                         >
@@ -447,7 +447,7 @@ export default function App() {
                             renderRightPane()
                         ) : (
                             <div className="p-4 h-full">
-                                <div className="bg-gray-800/30 rounded-lg p-4 h-full">
+                                <div className="bg-gray-800/30 backdrop-blur-sm rounded-lg p-4 h-full border border-purple-600/10">
                                     {renderRightPane()}
                                 </div>
                             </div>
@@ -459,12 +459,12 @@ export default function App() {
                 <>
                     <div
                         onMouseDown={handleDiffPanelResizeMouseDown}
-                        className="bg-gray-600 hover:bg-gray-500 cursor-row-resize transition-colors duration-200"
+                        className="bg-purple-800/60 hover:bg-purple-500/80 cursor-row-resize transition-colors duration-200"
                         style={{ height: '6px' }}
                     />
                     <div
                         style={{ height: diffPanelHeight }}
-                        className="border-t border-gray-700 overflow-auto font-mono p-4"
+                        className="border-t border-purple-700/30 overflow-auto font-mono p-4"
                     >
                         {diffContent}
                     </div>
@@ -476,7 +476,7 @@ export default function App() {
                     onClick={() => setAboutOpen(false)}
                 >
                     <div
-                        className="bg-gray-800 p-6 rounded-xl shadow-lg max-w-md border border-gray-600"
+                        className="bg-gray-800/90 backdrop-blur-sm p-6 rounded-xl shadow-lg max-w-md border border-purple-600/30"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <p>
@@ -486,7 +486,7 @@ export default function App() {
                         <div className="flex justify-end">
                             <button
                                 onClick={() => setAboutOpen(false)}
-                                className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 font-medium"
+                                className="mt-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors duration-200 font-medium"
                             >
                                 Close
                             </button>
