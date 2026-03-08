@@ -66,6 +66,8 @@ export default function App() {
     const [mode, setMode] = useState('')
     const [inputA, setInputA] = useState('')
     const [inputB, setInputB] = useState('')
+    const [diffStyle, setDiffStyle] = useState<'split' | 'unified'>('split')
+    const [hoveredDiffStyle, setHoveredDiffStyle] = useState<'split' | 'unified' | null>(null)
     const inputRef = useRef<HTMLTextAreaElement>(null)
     const diffTextareaRef = useRef<HTMLTextAreaElement>(null)
     const [rightPaneSelected, setRightPaneSelected] = useState(false)
@@ -225,6 +227,83 @@ export default function App() {
     const pierreInputA = `${inputA}\n`
     const pierreInputB = `${inputB}\n`
     const headerHeight = '40px'
+
+    const renderDiffStyleToggle = () => {
+        const sharedButtonClassName = 'inline-flex h-9 shrink-0 select-none items-center justify-center gap-2 rounded-none border px-[14px] py-2 text-sm font-medium leading-5 outline-none transition-all duration-150 first:rounded-l-[9px] last:rounded-r-[9px]'
+
+        return (
+            <div
+                role="group"
+                aria-label="Diff layout style"
+                className="inline-flex self-start overflow-hidden rounded-[10px] font-sans"
+                style={{
+                    backgroundColor: 'oklch(26.9% 0 0)',
+                }}
+            >
+                <button
+                    type="button"
+                    aria-pressed={diffStyle === 'split'}
+                    onClick={() => setDiffStyle('split')}
+                    onMouseEnter={() => setHoveredDiffStyle('split')}
+                    onMouseLeave={() => setHoveredDiffStyle((current) => current === 'split' ? null : current)}
+                    className={sharedButtonClassName}
+                    style={diffStyle === 'split'
+                        ? {
+                            backgroundColor: 'oklch(14.5% 0 0)',
+                            borderColor: 'oklch(100% 0 0 / 0.1)',
+                            color: 'oklch(98.5% 0 0)',
+                            boxShadow: 'none',
+                            pointerEvents: 'none',
+                        }
+                        : {
+                            backgroundColor: hoveredDiffStyle === 'split' ? 'oklch(14.5% 0 0 / 0.45)' : 'transparent',
+                            borderColor: hoveredDiffStyle === 'split' ? 'oklch(100% 0 0 / 0.08)' : 'transparent',
+                            color: hoveredDiffStyle === 'split' ? 'oklch(98.5% 0 0)' : 'oklch(70.8% 0 0)',
+                        }}
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+                        <path d="M2.5 1H8v14H2.5A1.5 1.5 0 0 1 1 13.5v-11A1.5 1.5 0 0 1 2.5 1" fill="#ff5252" fillOpacity="0.28" />
+                        <path d="M8 1h5.5A1.5 1.5 0 0 1 15 2.5v11a1.5 1.5 0 0 1-1.5 1.5H8V1" fill="#00b894" fillOpacity="0.3" />
+                        <path d="M3.2 8h2.6" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+                        <path d="M11.5 6.4v3.2" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+                        <path d="M9.9 8h3.2" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+                    </svg>
+                    <span>Split</span>
+                </button>
+                <button
+                    type="button"
+                    aria-pressed={diffStyle === 'unified'}
+                    onClick={() => setDiffStyle('unified')}
+                    onMouseEnter={() => setHoveredDiffStyle('unified')}
+                    onMouseLeave={() => setHoveredDiffStyle((current) => current === 'unified' ? null : current)}
+                    className={sharedButtonClassName}
+                    style={diffStyle === 'unified'
+                        ? {
+                            backgroundColor: 'oklch(14.5% 0 0)',
+                            borderColor: 'oklch(100% 0 0 / 0.1)',
+                            color: 'oklch(98.5% 0 0)',
+                            boxShadow: 'none',
+                            pointerEvents: 'none',
+                        }
+                        : {
+                            backgroundColor: hoveredDiffStyle === 'unified' ? 'oklch(14.5% 0 0 / 0.45)' : 'transparent',
+                            borderColor: hoveredDiffStyle === 'unified' ? 'oklch(100% 0 0 / 0.08)' : 'transparent',
+                            color: hoveredDiffStyle === 'unified' ? 'oklch(98.5% 0 0)' : 'oklch(70.8% 0 0)',
+                        }}
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+                        <path d="M2.5 1H13.5A1.5 1.5 0 0 1 15 2.5V8H1V2.5A1.5 1.5 0 0 1 2.5 1" fill="#ff5252" fillOpacity="0.28" />
+                        <path d="M1 8h14v5.5a1.5 1.5 0 0 1-1.5 1.5H2.5A1.5 1.5 0 0 1 1 13.5V8" fill="#00b894" fillOpacity="0.3" />
+                        <path d="M5.2 4.5h5.6" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+                        <path d="M8 10.1v3.1" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+                        <path d="M6.45 11.65h3.1" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+                    </svg>
+                    <span>Stacked</span>
+                </button>
+            </div>
+        )
+    }
+
     return (
         <div className="h-screen flex flex-col text-gray-100" style={{ background: 'linear-gradient(135deg, #070a13 0%, #100713 50%, #070a13 100%)' }}>
             <div className="relative flex items-center justify-center px-6 py-4 border-b border-purple-700/30 bg-gray-800/50 backdrop-blur-sm">
@@ -325,6 +404,7 @@ export default function App() {
                                             lang: 'text',
                                         }}
                                         options={{
+                                            themeType: 'dark',
                                             overflow: 'wrap',
                                             disableFileHeader: true,
                                         }}
@@ -332,24 +412,28 @@ export default function App() {
                                 ) : null}
                             </div>
                         ) : (
-                            <MultiFileDiff
-                                oldFile={{
-                                    name: 'before.txt',
-                                    contents: pierreInputA,
-                                    lang: 'text',
-                                }}
-                                newFile={{
-                                    name: 'after.txt',
-                                    contents: pierreInputB,
-                                    lang: 'text',
-                                }}
-                                options={{
-                                    diffStyle: 'split',
-                                    overflow: 'wrap',
-                                    lineDiffType: 'char',
-                                    disableFileHeader: true,
-                                }}
-                            />
+                            <div className="space-y-3">
+                                {renderDiffStyleToggle()}
+                                <MultiFileDiff
+                                    oldFile={{
+                                        name: 'before.txt',
+                                        contents: pierreInputA,
+                                        lang: 'text',
+                                    }}
+                                    newFile={{
+                                        name: 'after.txt',
+                                        contents: pierreInputB,
+                                        lang: 'text',
+                                    }}
+                                    options={{
+                                        themeType: 'dark',
+                                        diffStyle,
+                                        overflow: 'wrap',
+                                        lineDiffType: 'char',
+                                        disableFileHeader: true,
+                                    }}
+                                />
+                            </div>
                         )}
                     </div>
                 </>
