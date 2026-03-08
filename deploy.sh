@@ -1,4 +1,3 @@
-
 #!/bin/bash -e
 
 # Use latest node LTS to build the app.

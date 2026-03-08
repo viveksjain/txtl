@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react'
-import { diff_match_patch } from 'diff-match-patch'
+import React, { useState, useEffect, useRef } from 'react'
+import { File, MultiFileDiff } from '@pierre/diffs/react'
 
 function isMaybeEpochTime(val: number) {
     // Roughly, represents seconds since epoch from 2001 to 2049. We auto-detect this range as unix time.
@@ -71,7 +71,6 @@ export default function App() {
     const [rightPaneSelected, setRightPaneSelected] = useState(false)
     const [diffPanelHeight, setDiffPanelHeight] = useState(256)
     const [aboutOpen, setAboutOpen] = useState(false)
-    const [hoveredLineId, setHoveredLineId] = useState<string | null>(null)
 
     useEffect(() => {
         inputRef.current?.focus()
@@ -203,161 +202,6 @@ export default function App() {
         return renderPaneByMode(mode, inputA, inputB, setInputB)
     }
 
-    const diffContent = useMemo(() => {
-        if (mode !== 'diff') return null;
-        const dmp = new diff_match_patch()
-        const diffs = dmp.diff_main(inputA, inputB)
-        dmp.diff_cleanupSemantic(diffs)
-
-        class DiffSpan {
-            uuid: string;
-            content: string;
-            state: 'added' | 'removed' | 'unchanged' | 'spacer';
-
-            constructor(content: string, state: 'added' | 'removed' | 'unchanged' | 'spacer') {
-                this.uuid = crypto.randomUUID();
-                this.content = content;
-                this.state = state;
-            }
-        }
-        class DiffLine {
-            uuid: string;
-            spans: DiffSpan[];
-            showNextLineNumber?: boolean;
-            lineNumber?: number;
-
-            constructor() {
-                this.spans = [];
-                this.uuid = crypto.randomUUID();
-            }
-
-            addSpan(span: DiffSpan) {
-                this.spans.push(span);
-            }
-
-            lastSpan() {
-                if (this.spans.length === 0) return undefined;
-                return this.spans[this.spans.length - 1];
-            }
-        }
-        class Content {
-            lines: DiffLine[];
-
-            constructor() {
-                this.lines = [new DiffLine()];
-            }
-
-            last() {
-                return this.lines[this.lines.length - 1];
-            }
-
-            addLine(showLineNumber: boolean) {
-                this.last().showNextLineNumber = showLineNumber;
-                if (!showLineNumber) {
-                    this.last().spans.push(new DiffSpan('\n', 'spacer'));
-                }
-                this.lines.push(new DiffLine());
-            }
-
-            computeLineNumbers() {
-                let lineNumber = 1
-                let showNextLineNumber = true
-                this.lines.forEach((line) => {
-                    if (showNextLineNumber) {
-                        line.lineNumber = lineNumber
-                        lineNumber++
-                    }
-                    showNextLineNumber = line.showNextLineNumber ?? false
-                });
-            }
-        }
-
-        let leftContent = new Content()
-        let rightContent = new Content()
-        diffs.map((diff, _) => {
-            const [op, text] = diff
-            const lines = text.split(/(?<=\n)/);
-            lines.forEach((spanText, _) => {
-                if (op === 0) {
-                    leftContent.last().addSpan(new DiffSpan(spanText, 'unchanged'))
-                    rightContent.last().addSpan(new DiffSpan(spanText, 'unchanged'))
-                } else if (op === 1) {
-                    rightContent.last().addSpan(new DiffSpan(spanText, 'added'))
-                } else {
-                    leftContent.last().addSpan(new DiffSpan(spanText, 'removed'))
-                }
-
-                if (spanText.endsWith('\n')) {
-                    if (op === 0) {
-                        leftContent.addLine(true)
-                        rightContent.addLine(true)
-                    } else if (op === 1) {
-                        leftContent.addLine(false)
-                        rightContent.addLine(true)
-                    } else {
-                        leftContent.addLine(true)
-                        rightContent.addLine(false)
-                    }
-                }
-            })
-        })
-        leftContent.computeLineNumbers()
-        rightContent.computeLineNumbers()
-
-        return (
-            <div className="flex bg-gray-800/50 rounded-lg overflow-hidden">
-                <div className="w-1/2 border-r border-gray-600">
-                    <div className="px-4 py-2 text-sm text-gray-400 bg-gray-700/50 border-b border-gray-600">Original</div>
-                    {renderContent(leftContent)}
-                </div>
-                <div className="w-1/2">
-                    <div className="px-4 py-2 text-sm text-gray-400 bg-gray-700/50 border-b border-gray-600">Modified</div>
-                    {renderContent(rightContent)}
-                </div>
-            </div>
-        )
-
-        function renderContent(content: Content) {
-            return <pre className="whitespace-pre-wrap p-3 leading-5">
-                {content.lines.map((line, index) => {
-                    const isHovered = hoveredLineId === `${index}`
-                    return (
-                        <div
-                            key={line.uuid}
-                            className={`flex transition-colors duration-150 leading-5 min-h-5 ${isHovered ? 'bg-purple-600/20' : 'hover:bg-gray-700/30'
-                                }`}
-                            onMouseEnter={() => setHoveredLineId(`${index}`)}
-                            onMouseLeave={() => setHoveredLineId(null)}
-                        >
-                            <span className="w-10 select-none text-right pr-3 text-gray-500 text-xs leading-5 flex items-center justify-end">
-                                {line.lineNumber || '\u00A0'}
-                            </span>
-                            <div className="flex-1 flex leading-5 min-h-5" style={{ overflowWrap: 'anywhere' }}>
-                                <div className="leading-5">
-                                    {line.spans.map((span, _) => (
-                                        <span key={span.uuid}
-                                            className={`leading-5 ${span.state === 'added' ? 'bg-green-600/40 text-green-100' :
-                                                span.state === 'removed' ? 'bg-red-600/40 text-red-100' : ''}`}
-                                        >
-                                            {span.content}
-                                        </span>
-                                    ))}
-                                </div>
-
-                                {line.lastSpan()?.content.endsWith('\n') && (
-                                    <span
-                                        className={`flex-1 leading-5 ${line.lastSpan()?.state === 'added' ? 'bg-green-600/40' :
-                                            line.lastSpan()?.state === 'removed' ? 'bg-red-600/40' :
-                                                line.lastSpan()?.state === 'spacer' ? 'bg-gray-600/20' : ''}`} />
-                                )}
-                            </div>
-                        </div>
-                    )
-                })}
-            </pre>
-        }
-    }, [inputA, inputB, mode, hoveredLineId])
-
     const handleDiffPanelResizeMouseDown = (
         e: React.MouseEvent<HTMLDivElement>
     ) => {
@@ -376,6 +220,10 @@ export default function App() {
         document.addEventListener('mouseup', onMouseUp)
     }
 
+    const diffInputsMatch = inputA === inputB
+    // Avoid Pierre's EOF marker for missing trailing newlines.
+    const pierreInputA = `${inputA}\n`
+    const pierreInputB = `${inputB}\n`
     const headerHeight = '40px'
     return (
         <div className="h-screen flex flex-col text-gray-100" style={{ background: 'linear-gradient(135deg, #070a13 0%, #100713 50%, #070a13 100%)' }}>
@@ -466,7 +314,43 @@ export default function App() {
                         style={{ height: diffPanelHeight }}
                         className="border-t border-purple-700/30 overflow-auto font-mono p-4"
                     >
-                        {diffContent}
+                        {diffInputsMatch ? (
+                            <div className="space-y-3">
+                                <div className="text-sm text-gray-300">Inputs match exactly.</div>
+                                {inputA ? (
+                                    <File
+                                        file={{
+                                            name: 'matching.txt',
+                                            contents: pierreInputA,
+                                            lang: 'text',
+                                        }}
+                                        options={{
+                                            overflow: 'wrap',
+                                            disableFileHeader: true,
+                                        }}
+                                    />
+                                ) : null}
+                            </div>
+                        ) : (
+                            <MultiFileDiff
+                                oldFile={{
+                                    name: 'before.txt',
+                                    contents: pierreInputA,
+                                    lang: 'text',
+                                }}
+                                newFile={{
+                                    name: 'after.txt',
+                                    contents: pierreInputB,
+                                    lang: 'text',
+                                }}
+                                options={{
+                                    diffStyle: 'split',
+                                    overflow: 'wrap',
+                                    lineDiffType: 'char',
+                                    disableFileHeader: true,
+                                }}
+                            />
+                        )}
                     </div>
                 </>
             )}
