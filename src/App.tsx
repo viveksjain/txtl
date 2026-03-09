@@ -1,5 +1,22 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { File, MultiFileDiff } from '@pierre/diffs/react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
+import { parseDiffFromFile, setLanguageOverride } from '@pierre/diffs'
+import { File, FileDiff } from '@pierre/diffs/react'
+import { bundledLanguagesInfo } from 'shiki'
+
+const DIFF_LANGUAGES = [
+    { value: 'text', label: 'Plain text', extension: 'txt' },
+    ...bundledLanguagesInfo
+        .map((language) => ({
+            value: language.id,
+            label: language.name,
+            extension: language.aliases?.[0] ?? language.id,
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
+]
+
+function getDiffLanguageConfig(language: string) {
+    return DIFF_LANGUAGES.find((option) => option.value === language) ?? DIFF_LANGUAGES[0]
+}
 
 function isMaybeEpochTime(val: number) {
     // Roughly, represents seconds since epoch from 2001 to 2049. We auto-detect this range as unix time.
@@ -66,6 +83,7 @@ export default function App() {
     const [mode, setMode] = useState('')
     const [inputA, setInputA] = useState('')
     const [inputB, setInputB] = useState('')
+    const [diffLanguage, setDiffLanguage] = useState('text')
     const [diffStyle, setDiffStyle] = useState<'split' | 'unified'>('split')
     const [hoveredDiffStyle, setHoveredDiffStyle] = useState<'split' | 'unified' | null>(null)
     const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -227,6 +245,26 @@ export default function App() {
     const pierreInputA = `${inputA}\n`
     const pierreInputB = `${inputB}\n`
     const headerHeight = '40px'
+    const diffLanguageConfig = getDiffLanguageConfig(diffLanguage)
+    const pierreFileDiff = useMemo(() => {
+        if (diffInputsMatch) {
+            return null
+        }
+
+        return setLanguageOverride(
+            parseDiffFromFile(
+                {
+                    name: 'before',
+                    contents: pierreInputA,
+                },
+                {
+                    name: 'after',
+                    contents: pierreInputB,
+                }
+            ),
+            diffLanguageConfig.value
+        )
+    }, [diffInputsMatch, diffLanguageConfig.extension, diffLanguageConfig.value, pierreInputA, pierreInputB])
 
     const renderDiffStyleToggle = () => {
         const sharedButtonClassName = 'inline-flex h-9 shrink-0 select-none items-center justify-center gap-2 rounded-none border px-[14px] py-2 text-sm font-medium leading-5 outline-none transition-all duration-150 first:rounded-l-[9px] last:rounded-r-[9px]'
@@ -395,13 +433,25 @@ export default function App() {
                     >
                         {diffInputsMatch ? (
                             <div className="space-y-3">
-                                <div className="text-sm text-gray-300">Inputs match exactly.</div>
+                                <div className="flex items-center gap-3 font-sans">
+                                    <div className="text-sm text-gray-300 font-sans">Inputs match exactly.</div>
+                                    <select
+                                        className="h-9 min-w-[180px] rounded-lg border border-purple-600/40 bg-gray-800/80 px-3 text-sm text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 font-sans"
+                                        aria-label="Diff language override"
+                                        value={diffLanguage}
+                                        onChange={(e) => setDiffLanguage(e.target.value)}
+                                    >
+                                        {DIFF_LANGUAGES.map((option) => (
+                                            <option key={option.value} value={option.value}>{option.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
                                 {inputA ? (
                                     <File
                                         file={{
-                                            name: 'matching.txt',
+                                            name: 'matching',
                                             contents: pierreInputA,
-                                            lang: 'text',
+                                            lang: diffLanguageConfig.value,
                                         }}
                                         options={{
                                             themeType: 'dark',
@@ -413,26 +463,31 @@ export default function App() {
                             </div>
                         ) : (
                             <div className="space-y-3">
-                                {renderDiffStyleToggle()}
-                                <MultiFileDiff
-                                    oldFile={{
-                                        name: 'before.txt',
-                                        contents: pierreInputA,
-                                        lang: 'text',
-                                    }}
-                                    newFile={{
-                                        name: 'after.txt',
-                                        contents: pierreInputB,
-                                        lang: 'text',
-                                    }}
-                                    options={{
-                                        themeType: 'dark',
-                                        diffStyle,
-                                        overflow: 'wrap',
-                                        lineDiffType: 'char',
-                                        disableFileHeader: true,
-                                    }}
-                                />
+                                <div className="flex items-center gap-3 font-sans">
+                                    {renderDiffStyleToggle()}
+                                    <select
+                                        className="h-9 min-w-[180px] rounded-lg border border-purple-600/40 bg-gray-800/80 px-3 text-sm text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 font-sans"
+                                        aria-label="Diff language override"
+                                        value={diffLanguage}
+                                        onChange={(e) => setDiffLanguage(e.target.value)}
+                                    >
+                                        {DIFF_LANGUAGES.map((option) => (
+                                            <option key={option.value} value={option.value}>{option.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                {pierreFileDiff ? (
+                                    <FileDiff
+                                        fileDiff={pierreFileDiff}
+                                        options={{
+                                            themeType: 'dark',
+                                            diffStyle,
+                                            overflow: 'wrap',
+                                            lineDiffType: 'char',
+                                            disableFileHeader: true,
+                                        }}
+                                    />
+                                ) : null}
                             </div>
                         )}
                     </div>
