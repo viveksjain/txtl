@@ -1,21 +1,113 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { parseDiffFromFile, setLanguageOverride } from '@pierre/diffs'
-import { File, FileDiff } from '@pierre/diffs/react'
+import { File, FileDiff, SupportedLanguages } from '@pierre/diffs/react'
+import type { ModelOperations, ModelOperationsOptions } from '@vscode/vscode-languagedetection'
 import { bundledLanguagesInfo } from 'shiki'
 
-const DIFF_LANGUAGES = [
-    { value: 'text', label: 'Plain text', extension: 'txt' },
-    ...bundledLanguagesInfo
-        .map((language) => ({
-            value: language.id,
-            label: language.name,
-            extension: language.aliases?.[0] ?? language.id,
-        }))
-        .sort((a, b) => a.label.localeCompare(b.label)),
-]
+declare global {
+    interface Window {
+        DEBUG_LANG_DETECTION?: boolean
+    }
+}
 
-function getDiffLanguageConfig(language: string) {
-    return DIFF_LANGUAGES.find((option) => option.value === language) ?? DIFF_LANGUAGES[0]
+// Maps canonical diff language IDs to the dropdown labels shown in the UI.
+const LANGUAGE_ID_TO_LABEL = new Map<string, string>([
+    ['text', 'Plain text'],
+    ...bundledLanguagesInfo
+        .map((language) => [language.id, language.name] as const)
+        .sort((a, b) => a[1].localeCompare(b[1])),
+])
+// Maps detector output IDs and aliases to the canonical diff language IDs. The
+// language detection model `vscode-languagedetection` outputs IDs like "md",
+// whereas Shiki's canonical ID for it is "markdown" and "md" is just an alias.
+// So we maintain this mapping to resolve the detector output to a language that
+// Shiki/Pierre can understand for syntax highlighting.
+const ALIASES_TO_LANGUAGE_ID = bundledLanguagesInfo.reduce((aliases, language) => {
+    aliases.set(language.id.toLowerCase(), language.id)
+    language.aliases?.forEach((alias) => aliases.set(alias.toLowerCase(), language.id))
+    return aliases
+}, new Map<string, string>())
+
+function getDiffLanguageLabel(languageId: string) {
+    return LANGUAGE_ID_TO_LABEL.get(languageId) ?? LANGUAGE_ID_TO_LABEL.get('text')!
+}
+
+function detectedLanguageToLanguageId(languageId: string) {
+    return ALIASES_TO_LANGUAGE_ID.get(languageId.toLowerCase()) ?? 'text'
+}
+
+const MIN_DIFF_LANGUAGE_CONFIDENCE = 0.07 // Determined experimentally based on what seemed reasonable.
+
+type VSCodeLanguageDetectionModule = {
+    ModelOperations: new (options?: ModelOperationsOptions) => ModelOperations
+}
+
+async function loadVSCodeLanguageDetectionModule() {
+    const [
+        { default: moduleSource },
+        { default: chunk979Source },
+    ] = await Promise.all([
+        import('@vscode/vscode-languagedetection/dist/lib/index.js?raw'),
+        import('@vscode/vscode-languagedetection/dist/lib/979.js?raw'),
+    ])
+
+    const evaluateCommonJS = (source: string, requireFn: (id: string) => unknown) => {
+        const module = { exports: {} as VSCodeLanguageDetectionModule }
+        const factory = new Function(
+            'module',
+            'exports',
+            'require',
+            `${source}\nreturn module.exports;`
+        ) as (module: { exports: VSCodeLanguageDetectionModule }, exports: VSCodeLanguageDetectionModule, require: (id: string) => unknown) => VSCodeLanguageDetectionModule
+
+        return factory(module, module.exports, requireFn) ?? module.exports
+    }
+
+    let chunk979Exports: unknown
+    const requireFn = (id: string) => {
+        if (id === './979.js') {
+            chunk979Exports ??= evaluateCommonJS(chunk979Source, requireFn)
+            return chunk979Exports
+        }
+
+        throw new Error(`Unsupported vscode-languagedetection require: ${id}`)
+    }
+
+    return evaluateCommonJS(moduleSource, requireFn)
+}
+
+// Create a language detector instance by loading the model and weights. We do
+// this lazily on demand when the user enters diff mode to avoid unnecessary
+// network usage for users who don't use that feature.
+async function createDiffLanguageDetector() {
+    const [
+        { ModelOperations },
+        { default: languageDetectionModelJson },
+        { default: languageDetectionWeightsUrl },
+    ] = await Promise.all([
+        loadVSCodeLanguageDetectionModule(),
+        import('@vscode/vscode-languagedetection/model/model.json'),
+        import('@vscode/vscode-languagedetection/model/group1-shard1of1.bin?url'),
+    ])
+
+    return new ModelOperations({
+        modelJsonLoaderFunc: async () => languageDetectionModelJson,
+        weightsLoaderFunc: async () => fetch(languageDetectionWeightsUrl).then((response) => response.arrayBuffer()),
+        minContentSize: 1,
+    })
+}
+
+function debugLangDetection(message: string, details?: unknown) {
+    if (!window.DEBUG_LANG_DETECTION) {
+        return
+    }
+
+    console.log(`[lang-detect] ${message}`, details)
+    // if (details === undefined) {
+    //     return
+    // }
+
+    // console.log(`[lang-detect] ${message}`, details)
 }
 
 function isMaybeEpochTime(val: number) {
@@ -83,11 +175,21 @@ export default function App() {
     const [mode, setMode] = useState('')
     const [inputA, setInputA] = useState('')
     const [inputB, setInputB] = useState('')
-    const [diffLanguage, setDiffLanguage] = useState('text')
+    const [diffLanguageOverride, setDiffLanguageOverride] = useState('auto')
+    const [detectedDiffLanguage, setDetectedDiffLanguage] = useState('text')
+    const [diffLanguageLoading, setDiffLanguageLoading] = useState(false)
     const [diffStyle, setDiffStyle] = useState<'split' | 'unified'>('split')
     const [hoveredDiffStyle, setHoveredDiffStyle] = useState<'split' | 'unified' | null>(null)
     const inputRef = useRef<HTMLTextAreaElement>(null)
     const diffTextareaRef = useRef<HTMLTextAreaElement>(null)
+    // Reuse the initialized detector across runs so we only load the model once.
+    const diffLanguageDetectorRef = useRef<ModelOperations | null>(null)
+    // Track the in-flight detector initialization promise and share it between callers.
+    const diffLanguageDetectorPromiseRef = useRef<Promise<ModelOperations> | null>(null)
+    // Queue detection work so model execution stays serialized while inputs change rapidly.
+    const diffLanguageDetectionChainRef = useRef(Promise.resolve())
+    // Used to invalidate stale async detection results when a newer request supersedes them.
+    const diffLanguageDetectionRequestIdRef = useRef(0)
     const [rightPaneSelected, setRightPaneSelected] = useState(false)
     const [diffPanelHeight, setDiffPanelHeight] = useState(256)
     const [aboutOpen, setAboutOpen] = useState(false)
@@ -102,6 +204,95 @@ export default function App() {
             diffTextareaRef.current?.setSelectionRange(diffTextareaRef.current.value.length, diffTextareaRef.current.value.length)
         }
     }, [mode])
+
+    useEffect(() => {
+        diffLanguageDetectionRequestIdRef.current++;
+        if (mode !== 'diff' || diffLanguageOverride !== 'auto') {
+            setDiffLanguageLoading(false)
+            return
+        }
+
+        const detectionSample = [inputA, inputB]
+            .filter((value) => value.trim() !== '')
+            .join('\n')
+
+        if (!detectionSample) {
+            debugLangDetection('Returning early: empty detection sample')
+            setDetectedDiffLanguage('text')
+            setDiffLanguageLoading(false)
+            return
+        }
+
+        const requestId = diffLanguageDetectionRequestIdRef.current
+        // Add debounce effect to avoid frequent language detection.
+        const timeoutId = window.setTimeout(() => {
+            // Serialize detector runs so the model doesn't reload weights concurrently.
+            diffLanguageDetectionChainRef.current = diffLanguageDetectionChainRef.current
+                .catch(() => { })
+                .then(async () => {
+                    if (requestId !== diffLanguageDetectionRequestIdRef.current) {
+                        return
+                    }
+
+                    try {
+                        let detector = diffLanguageDetectorRef.current
+                        if (detector == null) {
+                            debugLangDetection('Loading language detector')
+                            setDiffLanguageLoading(true)
+                            detector = await (diffLanguageDetectorPromiseRef.current ??= createDiffLanguageDetector())
+                            debugLangDetection('Language detector loaded')
+                        }
+
+                        diffLanguageDetectorRef.current = detector
+                        diffLanguageDetectorPromiseRef.current = null
+                        setDiffLanguageLoading(false)
+
+                        debugLangDetection('Running language detector')
+                        const results = await detector.runModel(detectionSample)
+                        if (requestId !== diffLanguageDetectionRequestIdRef.current) {
+                            debugLangDetection('Returning early: stale request after detection completes', {
+                                requestId,
+                                currentRequestId: diffLanguageDetectionRequestIdRef.current,
+                            })
+                            return
+                        }
+
+                        const bestResult = results[0]
+                        if (!bestResult) {
+                            debugLangDetection('Returning early: detector returned no results')
+                            setDetectedDiffLanguage('text')
+                            return
+                        } else if (bestResult.confidence < MIN_DIFF_LANGUAGE_CONFIDENCE) {
+                            debugLangDetection('Returning early: confidence below threshold', {
+                                requestId,
+                                bestResult,
+                                threshold: MIN_DIFF_LANGUAGE_CONFIDENCE,
+                            })
+                            setDetectedDiffLanguage('text')
+                            return
+                        }
+
+                        const resolvedLanguage = detectedLanguageToLanguageId(bestResult.languageId)
+                        debugLangDetection('Language detected', {
+                            bestResult,
+                            resolved: resolvedLanguage,
+                        })
+                        setDetectedDiffLanguage(resolvedLanguage)
+                    } catch (error) {
+                        console.error('Failed to auto-detect diff language:', error)
+                        if (requestId === diffLanguageDetectionRequestIdRef.current) {
+                            setDetectedDiffLanguage('text')
+                            setDiffLanguageLoading(false)
+                        }
+                        diffLanguageDetectorPromiseRef.current = null
+                    }
+                })
+        }, 150)
+
+        return () => {
+            window.clearTimeout(timeoutId)
+        }
+    }, [diffLanguageOverride, inputA, inputB, mode])
 
     const handleRightPanePaste = async (e: React.ClipboardEvent) => {
         if (!mode) {
@@ -241,11 +432,24 @@ export default function App() {
     }
 
     const diffInputsMatch = inputA === inputB
-    // Avoid Pierre's EOF marker for missing trailing newlines.
+    // Pierre removes the last newline and shows missing end-of-file newline, so we manually add an extra newline.
     const pierreInputA = `${inputA}\n`
     const pierreInputB = `${inputB}\n`
     const headerHeight = '40px'
-    const diffLanguageConfig = getDiffLanguageConfig(diffLanguage)
+    const diffLanguage = diffLanguageOverride === 'auto' ? detectedDiffLanguage : diffLanguageOverride
+    const detectedDiffLanguageLabel = getDiffLanguageLabel(detectedDiffLanguage)
+    const diffLanguageOptions = useMemo(() => [
+        {
+            value: 'auto',
+            label: diffLanguageLoading
+                ? 'Auto-detect (Loading)'
+                : `Auto-detect (${detectedDiffLanguageLabel})`,
+        },
+        ...Array.from(LANGUAGE_ID_TO_LABEL, ([languageId, label]) => ({
+            value: languageId,
+            label,
+        })),
+    ], [detectedDiffLanguageLabel, diffLanguageLoading])
     const pierreFileDiff = useMemo(() => {
         if (diffInputsMatch) {
             return null
@@ -262,9 +466,22 @@ export default function App() {
                     contents: pierreInputB,
                 }
             ),
-            diffLanguageConfig.value
+            diffLanguage as SupportedLanguages
         )
-    }, [diffInputsMatch, diffLanguageConfig.extension, diffLanguageConfig.value, pierreInputA, pierreInputB])
+    }, [diffInputsMatch, diffLanguage, pierreInputA, pierreInputB])
+
+    const renderDiffLanguageSelect = () => (
+        <select
+            className="h-9 min-w-[240px] rounded-lg border border-purple-600/40 bg-gray-800/80 px-3 text-sm text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 font-sans"
+            aria-label="Diff language override"
+            value={diffLanguageOverride}
+            onChange={(e) => setDiffLanguageOverride(e.target.value)}
+        >
+            {diffLanguageOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+        </select>
+    )
 
     const renderDiffStyleToggle = () => {
         const sharedButtonClassName = 'inline-flex h-9 shrink-0 select-none items-center justify-center gap-2 rounded-none border px-[14px] py-2 text-sm font-medium leading-5 outline-none transition-all duration-150 first:rounded-l-[9px] last:rounded-r-[9px]'
@@ -435,25 +652,18 @@ export default function App() {
                             <div className="space-y-3">
                                 <div className="flex items-center gap-3 font-sans">
                                     <div className="text-sm text-gray-300 font-sans">Inputs match exactly.</div>
-                                    <select
-                                        className="h-9 min-w-[180px] rounded-lg border border-purple-600/40 bg-gray-800/80 px-3 text-sm text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 font-sans"
-                                        aria-label="Diff language override"
-                                        value={diffLanguage}
-                                        onChange={(e) => setDiffLanguage(e.target.value)}
-                                    >
-                                        {DIFF_LANGUAGES.map((option) => (
-                                            <option key={option.value} value={option.value}>{option.label}</option>
-                                        ))}
-                                    </select>
+                                    {renderDiffLanguageSelect()}
                                 </div>
                                 {inputA ? (
                                     <File
                                         file={{
                                             name: 'matching',
                                             contents: pierreInputA,
-                                            lang: diffLanguageConfig.value,
+                                            lang: diffLanguage,
                                         }}
                                         options={{
+                                            // Pin Pierre to the dark theme so it does not load the unused light variant.
+                                            theme: 'pierre-dark',
                                             themeType: 'dark',
                                             overflow: 'wrap',
                                             disableFileHeader: true,
@@ -465,21 +675,13 @@ export default function App() {
                             <div className="space-y-3">
                                 <div className="flex items-center gap-3 font-sans">
                                     {renderDiffStyleToggle()}
-                                    <select
-                                        className="h-9 min-w-[180px] rounded-lg border border-purple-600/40 bg-gray-800/80 px-3 text-sm text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 font-sans"
-                                        aria-label="Diff language override"
-                                        value={diffLanguage}
-                                        onChange={(e) => setDiffLanguage(e.target.value)}
-                                    >
-                                        {DIFF_LANGUAGES.map((option) => (
-                                            <option key={option.value} value={option.value}>{option.label}</option>
-                                        ))}
-                                    </select>
+                                    {renderDiffLanguageSelect()}
                                 </div>
                                 {pierreFileDiff ? (
                                     <FileDiff
                                         fileDiff={pierreFileDiff}
                                         options={{
+                                            theme: 'pierre-dark',
                                             themeType: 'dark',
                                             diffStyle,
                                             overflow: 'wrap',
