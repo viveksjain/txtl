@@ -1,3 +1,5 @@
+process.env.TZ = 'UTC'
+
 import { describe, expect, it } from 'vitest'
 import { parseTimezoneInput } from './timezone'
 
@@ -49,13 +51,13 @@ describe('parseTimezoneInput', () => {
     })
 
     it('uses the input timezone date when the UTC date rolls over', () => {
-        const reference = new Date('2026-07-22T00:30:00.000Z')
+        const reference = new Date('2026-07-22T12:30:00.000Z')
 
         const result = parseTimezoneInput('4pm UTC+14', reference)
 
         expect(result).toEqual({
             ok: true,
-            date: new Date('2026-07-22T02:00:00.000Z'),
+            date: new Date('2026-07-23T02:00:00.000Z'),
         })
     })
 
