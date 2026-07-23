@@ -4,6 +4,7 @@ import { File, FileDiff, SupportedLanguages } from '@pierre/diffs/react'
 import type { ModelOperations, ModelOperationsOptions } from '@vscode/vscode-languagedetection'
 import { bundledLanguagesInfo } from 'shiki'
 import { detectMode } from './modeDetection'
+import { parseTimezoneInput } from './timezone'
 
 declare global {
     interface Window {
@@ -309,6 +310,18 @@ export default function App() {
                 </div>
             )
         }
+        if (mode === 'timezone') {
+            const result = parseTimezoneInput(inputA)
+            if (!result.ok) {
+                return <div className="text-red-600">Invalid date or time</div>
+            }
+            return (
+                <div>
+                    <div>Local: {result.date.toString()}</div>
+                    <div>UTC: {result.date.toUTCString()}</div>
+                </div>
+            )
+        }
         if (mode === 'number') {
             const { decimal, hex, octal, binary, detectedBase } = parseNumber(inputA)
             const grayIf = (base: number) => base === detectedBase ? 'text-gray-400' : ''
@@ -585,6 +598,7 @@ export default function App() {
                             <option value="diff">Text diff</option>
                             <option value="json">JSON pretty print</option>
                             <option value="unix">Unix epoch time</option>
+                            <option value="timezone">Timezone conversion</option>
                             <option value="number">Number conversion</option>
                             <option value="urlendecode">URL encode/decode</option>
                             <option value="base64">Base64 encode/decode</option>

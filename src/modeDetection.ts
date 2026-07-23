@@ -1,3 +1,5 @@
+import { parseTimezoneInput } from './timezone'
+
 function isMaybeEpochTime(val: number) {
     // Roughly, represents seconds since epoch from 2001 to 2049. We auto-detect this range as unix time.
     const inAllowedRange = (num: number): boolean => num >= 1000000000 && num <= 2500000000;
@@ -24,6 +26,9 @@ export function detectMode(val: string) {
         return 'urlendecode'
     } catch {
         // Not a valid URL
+    }
+    if (parseTimezoneInput(trimmed).ok) {
+        return 'timezone'
     }
     // Thanks to https://github.com/gchq/CyberChef/wiki/Automatic-detection-of-encoded-data-using-CyberChef-Magic#pattern-matching
     const base64Regex = /^(?:[A-Z\d+/]{4})+(?:[A-Z\d+/]{2}==|[A-Z\d+/]{3}=)?$/i
