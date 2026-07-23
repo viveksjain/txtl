@@ -1,10 +1,5 @@
 import * as chrono from 'chrono-node'
 
-export type TimezoneParseResult =
-    | { ok: true; date: Date }
-    | { ok: false; reason: 'invalid' }
-
-const invalid = (): TimezoneParseResult => ({ ok: false, reason: 'invalid' })
 const dateComponents: chrono.Component[] = ['year', 'month', 'day']
 
 function parseFullInput(input: string, reference?: chrono.ParsingReference | Date) {
@@ -28,31 +23,31 @@ function parseFullInput(input: string, reference?: chrono.ParsingReference | Dat
 export function parseTimezoneInput(
     input: string,
     referenceInstant?: Date
-): TimezoneParseResult {
+): Date | undefined {
     const trimmedInput = input.trim()
 
     try {
         let result = parseFullInput(trimmedInput, referenceInstant)
-        if (!result) return invalid()
+        if (!result) return undefined
 
         const hasCertainDate = dateComponents.some((component) => result.start.isCertain(component))
 
         if (!hasCertainDate && result.start.isCertain('timezoneOffset')) {
             const timezoneOffset = result.start.get('timezoneOffset')
-            if (timezoneOffset === null) return invalid()
+            if (timezoneOffset === null) return undefined
 
             result = parseFullInput(trimmedInput, {
                 instant: referenceInstant,
                 timezone: timezoneOffset,
             })
-            if (!result) return invalid()
+            if (!result) return undefined
         }
 
         const date = result.start.date()
-        if (Number.isNaN(date.getTime())) return invalid()
+        if (Number.isNaN(date.getTime())) return undefined
 
-        return { ok: true, date }
+        return date
     } catch {
-        return invalid()
+        return undefined
     }
 }

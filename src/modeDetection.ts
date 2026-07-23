@@ -27,7 +27,7 @@ export function detectMode(val: string) {
     } catch {
         // Not a valid URL
     }
-    if (parseTimezoneInput(trimmed).ok) {
+    if (parseTimezoneInput(trimmed)) {
         return 'timezone'
     }
     // Thanks to https://github.com/gchq/CyberChef/wiki/Automatic-detection-of-encoded-data-using-CyberChef-Magic#pattern-matching

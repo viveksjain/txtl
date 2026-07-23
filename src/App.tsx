@@ -311,14 +311,14 @@ export default function App() {
             )
         }
         if (mode === 'timezone') {
-            const result = parseTimezoneInput(inputA)
-            if (!result.ok) {
+            const date = parseTimezoneInput(inputA)
+            if (!date) {
                 return <div className="text-red-600">Invalid date or time</div>
             }
             return (
                 <div>
-                    <div>Local: {result.date.toString()}</div>
-                    <div>UTC: {result.date.toUTCString()}</div>
+                    <div>Local: {date.toString()}</div>
+                    <div>UTC: {date.toUTCString()}</div>
                 </div>
             )
         }
