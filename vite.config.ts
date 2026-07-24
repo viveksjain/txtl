@@ -5,5 +5,8 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
     // Allow Github Action to override base
     base: process.env.OVERRIDE_BASE || undefined,
-    plugins: [react()]
+    plugins: [react()],
+    build: {
+        target: ['chrome87', 'edge88', 'firefox78', 'safari14'],
+    },
 })
