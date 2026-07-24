@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 vi.mock('@pierre/diffs', () => ({
@@ -40,6 +40,7 @@ describe('timezone selector integration', () => {
     })
 
     afterEach(() => {
+        vi.useRealTimers()
         cleanup()
     })
 
@@ -105,6 +106,25 @@ describe('timezone selector integration', () => {
         expect(screen.getByText('Invalid date or time')).toBeTruthy()
         expect(screen.getByLabelText('Add timezone')).toBeTruthy()
         expect(screen.queryByText(/Los Angeles - America:/)).toBeNull()
+    })
+
+    it('refreshes fallback option offsets when timezone mode activates', () => {
+        vi.useFakeTimers()
+        vi.setSystemTime(new Date('2026-01-23T12:00:00.000Z'))
+        render(<App />)
+
+        const input = screen.getByPlaceholderText('Enter input...')
+        const mode = screen.getByRole('combobox')
+
+        fireEvent.change(input, { target: { value: 'not a date' } })
+        vi.setSystemTime(new Date('2026-07-23T12:00:00.000Z'))
+        fireEvent.change(mode, { target: { value: 'timezone' } })
+
+        const option = Array.from(
+            (screen.getByLabelText('Add timezone') as HTMLSelectElement).options
+        ).find((candidate) => candidate.value === 'America/Los_Angeles')
+
+        expect(option?.textContent).toBe('Los Angeles - America (UTC-07:00)')
     })
 
     it('shows the selector for autodetected timezone input', async () => {

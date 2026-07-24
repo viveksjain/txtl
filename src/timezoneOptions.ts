@@ -35,6 +35,7 @@ export function formatTimezoneLabel(timeZone: string): string {
 }
 
 const offsetFormatters = new Map<string, Intl.DateTimeFormat>()
+const numericTimezoneNamePattern = /^(?:GMT|UTC)[+-]\d{1,2}(?::?\d{2})?$/
 
 function getOffsetFormatter(timeZone: string): Intl.DateTimeFormat {
     const existing = offsetFormatters.get(timeZone)
@@ -103,8 +104,28 @@ export function formatDateInTimezone(date: Date, timeZone: string): string {
 
         if (
             timeZoneName &&
-            /^(?:GMT|UTC)[+-]\d{1,2}(?::?\d{2})?$/.test(timeZoneName.value)
+            numericTimezoneNamePattern.test(timeZoneName.value)
         ) {
+            try {
+                const genericOptions: Intl.DateTimeFormatOptions = {
+                    ...options,
+                    timeZoneName: 'shortGeneric',
+                }
+                const genericFormatter = new Intl.DateTimeFormat('en-US', genericOptions)
+                const genericTimezoneName = genericFormatter
+                    .formatToParts(date)
+                    .find((part) => part.type === 'timeZoneName')
+
+                if (
+                    genericTimezoneName &&
+                    !numericTimezoneNamePattern.test(genericTimezoneName.value)
+                ) {
+                    return genericFormatter.format(date)
+                }
+            } catch {
+                // Older runtimes may not support generic timezone names.
+            }
+
             const { timeZoneName: _, ...withoutTimeZoneName } = options
             return new Intl.DateTimeFormat('en-US', withoutTimeZoneName).format(date)
         }

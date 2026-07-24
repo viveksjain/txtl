@@ -192,7 +192,7 @@ export default function App() {
     )
     const timezoneOptionInstant = useMemo(
         () => resolveTimezoneOptionInstant(parsedTimezoneDate),
-        [inputA, parsedTimezoneDate]
+        [activeMode, inputA, parsedTimezoneDate]
     )
     const timezoneOptions = useMemo(
         () =>
