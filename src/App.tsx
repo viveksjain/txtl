@@ -397,7 +397,7 @@ export default function App() {
             return (
                 <div>
                     <div>Local: {date.toString()}</div>
-                    <div>UTC: {date.toUTCString()}</div>
+                    <div>UTC: {formatDateInTimezone(date, 'UTC')}</div>
                     {renderAdditionalTimezone(date)}
                 </div>
             )

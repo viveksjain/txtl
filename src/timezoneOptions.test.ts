@@ -100,7 +100,16 @@ describe('formatDateInTimezone', () => {
                 new Date('2026-07-23T23:00:00.000Z'),
                 'America/Los_Angeles'
             )
-        ).toBe('Jul 23, 2026, 4:00:00 PM PDT')
+        ).toBe('Thu Jul 23 2026 16:00:00 PDT')
+    })
+
+    it('formats UTC without punctuation', () => {
+        expect(
+            formatDateInTimezone(
+                new Date('2026-07-24T13:00:00.000Z'),
+                'UTC'
+            )
+        ).toBe('Fri Jul 24 2026 13:00:00 GMT')
     })
 
     it('uses a generic timezone name when short output is numeric', () => {
@@ -109,7 +118,7 @@ describe('formatDateInTimezone', () => {
                 new Date('2026-07-23T23:00:00.000Z'),
                 'Asia/Kolkata'
             )
-        ).toBe('Jul 24, 2026, 4:30:00 AM India Time')
+        ).toBe('Fri Jul 24 2026 04:30:00 India Time')
     })
 
     it('returns a safe message when formatting fails', () => {

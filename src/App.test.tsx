@@ -21,7 +21,7 @@ import App from './App'
 import { SELECTED_TIMEZONE_STORAGE_KEY } from './timezoneSelection'
 
 const inputValue = '2026-07-23T23:00:00Z'
-const selectedOutput = 'Los Angeles - America: Jul 23, 2026, 4:00:00 PM PDT'
+const selectedOutput = 'Los Angeles - America: Thu Jul 23 2026 16:00:00 PDT'
 
 function renderTimezoneMode() {
     const user = userEvent.setup()
@@ -75,7 +75,7 @@ describe('timezone selector integration', () => {
         await user.type(input, inputValue)
 
         expect(screen.getByText(`Local: ${date.toString()}`)).toBeTruthy()
-        expect(screen.getByText(`UTC: ${date.toUTCString()}`)).toBeTruthy()
+        expect(screen.getByText('UTC: Thu Jul 23 2026 23:00:00 GMT')).toBeTruthy()
 
         const timezoneSelect = screen.getByLabelText('Add timezone')
         expect(timezoneSelect.parentElement?.className).toContain('grid')

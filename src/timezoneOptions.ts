@@ -88,19 +88,19 @@ export function formatDateInTimezone(date: Date, timeZone: string): string {
     try {
         const options: Intl.DateTimeFormatOptions = {
             timeZone,
+            weekday: 'short',
             month: 'short',
-            day: 'numeric',
+            day: '2-digit',
             year: 'numeric',
-            hour: 'numeric',
+            hour: '2-digit',
             minute: '2-digit',
             second: '2-digit',
-            hour12: true,
+            hourCycle: 'h23',
             timeZoneName: 'short',
         }
         const formatter = new Intl.DateTimeFormat('en-US', options)
-        const timeZoneName = formatter
-            .formatToParts(date)
-            .find((part) => part.type === 'timeZoneName')
+        let parts = formatter.formatToParts(date)
+        const timeZoneName = parts.find((part) => part.type === 'timeZoneName')
 
         if (
             timeZoneName &&
@@ -120,17 +120,36 @@ export function formatDateInTimezone(date: Date, timeZone: string): string {
                     genericTimezoneName &&
                     !numericTimezoneNamePattern.test(genericTimezoneName.value)
                 ) {
-                    return genericFormatter.format(date)
+                    parts = genericFormatter.formatToParts(date)
                 }
             } catch {
                 // Older runtimes may not support generic timezone names.
             }
 
-            const { timeZoneName: _, ...withoutTimeZoneName } = options
-            return new Intl.DateTimeFormat('en-US', withoutTimeZoneName).format(date)
+            if (numericTimezoneNamePattern.test(
+                parts.find((part) => part.type === 'timeZoneName')?.value ?? ''
+            )) {
+                parts = parts.filter((part) => part.type !== 'timeZoneName')
+            }
         }
 
-        return formatter.format(date)
+        const valueByType = new Map(parts.map((part) => [part.type, part.value]))
+        const weekday = valueByType.get('weekday')
+        const month = valueByType.get('month')
+        const day = valueByType.get('day')
+        const year = valueByType.get('year')
+        const hour = valueByType.get('hour')
+        const minute = valueByType.get('minute')
+        const second = valueByType.get('second')
+        const formattedTimeZone = valueByType.get('timeZoneName')
+        const timeZoneNameValue = timeZone === 'UTC' ? 'GMT' : formattedTimeZone
+
+        if (!weekday || !month || !day || !year || !hour || !minute || !second) {
+            return 'Unable to format selected timezone'
+        }
+
+        const suffix = timeZoneNameValue ? ` ${timeZoneNameValue}` : ''
+        return `${weekday} ${month} ${day} ${year} ${hour}:${minute}:${second}${suffix}`
     } catch {
         return 'Unable to format selected timezone'
     }
