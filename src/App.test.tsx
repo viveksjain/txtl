@@ -76,7 +76,7 @@ describe('timezone selector integration', () => {
         expect(screen.getByText(`Local: ${date.toString()}`)).toBeTruthy()
         expect(screen.getByText(`UTC: ${date.toUTCString()}`)).toBeTruthy()
 
-        const timezoneSelect = screen.getByLabelText('Additional timezone')
+        const timezoneSelect = screen.getByLabelText('Add timezone')
         expect(timezoneSelect.parentElement?.className).toContain('grid')
         expect(timezoneSelect.className).toContain('min-w-0')
         expect(timezoneSelect.className).toContain('w-full')
@@ -103,7 +103,7 @@ describe('timezone selector integration', () => {
         await user.type(input, 'not a date')
 
         expect(screen.getByText('Invalid date or time')).toBeTruthy()
-        expect(screen.getByLabelText('Additional timezone')).toBeTruthy()
+        expect(screen.getByLabelText('Add timezone')).toBeTruthy()
         expect(screen.queryByText(/Los Angeles - America:/)).toBeNull()
     })
 
@@ -113,7 +113,7 @@ describe('timezone selector integration', () => {
         await user.type(input, '4pm UTC')
 
         expect(screen.getByText('Auto-detected: timezone')).toBeTruthy()
-        expect(screen.getByLabelText('Additional timezone')).toBeTruthy()
+        expect(screen.getByLabelText('Add timezone')).toBeTruthy()
     })
 
     it('restores a persisted valid timezone selection after remount', async () => {
@@ -129,7 +129,7 @@ describe('timezone selector integration', () => {
         await user.selectOptions(mode, 'timezone')
         await user.type(input, inputValue)
 
-        expect((screen.getByLabelText('Additional timezone') as HTMLSelectElement).value).toBe(
+        expect((screen.getByLabelText('Add timezone') as HTMLSelectElement).value).toBe(
             'America/Los_Angeles'
         )
         expect(screen.getByText(selectedOutput)).toBeTruthy()
