@@ -103,6 +103,15 @@ describe('formatDateInTimezone', () => {
         ).toBe('Jul 23, 2026, 4:00:00 PM PDT')
     })
 
+    it('omits a numeric timezone offset from the selected output', () => {
+        expect(
+            formatDateInTimezone(
+                new Date('2026-07-23T23:00:00.000Z'),
+                'Asia/Kolkata'
+            )
+        ).toBe('Jul 24, 2026, 4:30:00 AM')
+    })
+
     it('returns a safe message when formatting fails', () => {
         expect(
             formatDateInTimezone(
@@ -120,5 +129,6 @@ describe('resolveTimezoneOptionInstant', () => {
 
         expect(resolveTimezoneOptionInstant(parsed, now)).toBe(parsed)
         expect(resolveTimezoneOptionInstant(undefined, now)).toBe(now)
+        expect(resolveTimezoneOptionInstant(new Date('invalid'), now)).toBe(now)
     })
 })

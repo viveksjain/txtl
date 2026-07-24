@@ -85,7 +85,7 @@ export function buildTimezoneOptions(
 
 export function formatDateInTimezone(date: Date, timeZone: string): string {
     try {
-        return new Intl.DateTimeFormat('en-US', {
+        const options: Intl.DateTimeFormatOptions = {
             timeZone,
             month: 'short',
             day: 'numeric',
@@ -95,7 +95,21 @@ export function formatDateInTimezone(date: Date, timeZone: string): string {
             second: '2-digit',
             hour12: true,
             timeZoneName: 'short',
-        }).format(date)
+        }
+        const formatter = new Intl.DateTimeFormat('en-US', options)
+        const timeZoneName = formatter
+            .formatToParts(date)
+            .find((part) => part.type === 'timeZoneName')
+
+        if (
+            timeZoneName &&
+            /^(?:GMT|UTC)[+-]\d{1,2}(?::?\d{2})?$/.test(timeZoneName.value)
+        ) {
+            const { timeZoneName: _, ...withoutTimeZoneName } = options
+            return new Intl.DateTimeFormat('en-US', withoutTimeZoneName).format(date)
+        }
+
+        return formatter.format(date)
     } catch {
         return 'Unable to format selected timezone'
     }
@@ -105,5 +119,5 @@ export function resolveTimezoneOptionInstant(
     parsedDate: Date | undefined,
     now: Date = new Date()
 ): Date {
-    return parsedDate ?? now
+    return parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : now
 }
