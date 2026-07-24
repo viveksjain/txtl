@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -41,6 +41,29 @@ describe('timezone selector integration', () => {
 
     afterEach(() => {
         cleanup()
+    })
+
+    it('stacks input and output panes below the desktop breakpoint', () => {
+        render(<App />)
+
+        const inputPane = screen.getByText('Input').parentElement?.parentElement
+        const outputPane = screen.getByText('Mode').parentElement?.parentElement
+
+        expect(inputPane?.className).toContain('w-full')
+        expect(inputPane?.className).toContain('md:w-1/2')
+        expect(inputPane?.className).toContain('flex-1')
+        expect(outputPane?.className).toContain('w-full')
+        expect(outputPane?.className).toContain('md:w-1/2')
+        expect(outputPane?.className).toContain('flex-1')
+    })
+
+    it('keeps header navigation in normal flow below the small breakpoint', () => {
+        render(<App />)
+
+        const navigation = screen.getByRole('link', { name: 'GitHub' }).parentElement
+
+        expect(navigation?.className).toContain('sm:absolute')
+        expect(navigation?.className).not.toContain(' absolute ')
     })
 
     it('renders manual timezone conversion, persists selection, and clears None', async () => {

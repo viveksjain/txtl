@@ -621,7 +621,7 @@ export default function App() {
 
     return (
         <div className="h-screen flex flex-col text-gray-100" style={{ background: 'linear-gradient(135deg, #070a13 0%, #100713 50%, #070a13 100%)' }}>
-            <div className="relative flex items-center justify-center px-6 py-4 border-b border-purple-700/30 bg-gray-800/50 backdrop-blur-sm">
+            <div className="relative flex flex-col items-center justify-center gap-3 px-4 py-3 border-b border-purple-700/30 bg-gray-800/50 backdrop-blur-sm sm:px-6 sm:py-4">
                 <div className="flex flex-col justify-center items-center gap-1">
                     <h1 className="text-4xl font-bold font-mono">
                         <span style={{ color: '#d3d3d3' }}>t</span>
@@ -631,7 +631,7 @@ export default function App() {
                     </h1>
                     <p className="text-sm text-gray-400">A fast, no frills collection of text utilities</p>
                 </div>
-                <div className="absolute right-6 flex space-x-6">
+                <div className="flex space-x-6 sm:absolute sm:right-6">
                     <a
                         href="https://github.com/viveksjain/txtl"
                         target="_blank"
@@ -646,12 +646,12 @@ export default function App() {
                     <button className="text-gray-300 hover:text-white hover:underline transition-colors duration-200" onClick={() => setAboutOpen(true)}>About</button>
                 </div>
             </div>
-            <div className="flex flex-1" style={{ background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.08) 0%, rgba(33, 0, 57, 0.18) 50%, rgba(0, 0, 0, 0.08) 100%)' }}>
-                <div className="w-1/2 h-full flex flex-col">
+            <div className="flex flex-1 min-h-0 flex-col md:flex-row" style={{ background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.08) 0%, rgba(33, 0, 57, 0.18) 50%, rgba(0, 0, 0, 0.08) 100%)' }}>
+                <div className="w-full md:w-1/2 flex-1 min-h-0 flex flex-col">
                     <div className="flex shrink-0 items-center border-b border-purple-700/30" style={{ height: headerHeight }}>
                         <span className="ml-2 p-2">Input</span>
                     </div>
-                    <div className="p-4 w-full h-full">
+                    <div className="p-4 w-full flex-1 min-h-0">
                         <textarea
                             ref={inputRef}
                             className="w-full h-full border border-purple-600/40 rounded-lg p-4 resize-none bg-gray-800/70 text-gray-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
@@ -662,7 +662,7 @@ export default function App() {
                     </div>
                 </div>
                 <div
-                    className={`w-1/2 h-full flex flex-col border-l border-purple-700/30 ${rightPaneSelected ? 'ring-2 ring-purple-500' : ''}`}
+                    className={`w-full md:w-1/2 flex-1 min-h-0 flex flex-col border-t md:border-t-0 md:border-l border-purple-700/30 ${rightPaneSelected ? 'ring-2 ring-purple-500' : ''}`}
                     tabIndex={0}
                     onFocus={() => setRightPaneSelected(true)}
                     onBlur={() => setRightPaneSelected(false)}
