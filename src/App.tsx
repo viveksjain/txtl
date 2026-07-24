@@ -322,11 +322,11 @@ export default function App() {
     function renderAdditionalTimezone(date?: Date) {
         return (
             <div className="mt-4 space-y-2">
-                <label className="flex items-center gap-2">
+                <label className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2">
                     <span className="shrink-0">Additional timezone</span>
                     <select
                         aria-label="Additional timezone"
-                        className="min-w-0 max-w-full w-80 p-2 bg-gray-800/80 text-gray-100 border border-purple-600/40 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        className="min-w-0 w-full max-w-full p-2 bg-gray-800/80 text-gray-100 border border-purple-600/40 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         value={selectedTimezone}
                         onChange={(event) => setSelectedTimezone(event.target.value)}
                     >
