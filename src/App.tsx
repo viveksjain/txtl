@@ -5,6 +5,17 @@ import type { ModelOperations, ModelOperationsOptions } from '@vscode/vscode-lan
 import { bundledLanguagesInfo } from 'shiki'
 import { detectMode } from './modeDetection'
 import { parseTimezoneInput } from './timezone'
+import {
+    buildTimezoneOptions,
+    formatDateInTimezone,
+    formatTimezoneLabel,
+    getSupportedTimezoneNames,
+    resolveTimezoneOptionInstant,
+} from './timezoneOptions'
+import {
+    loadSelectedTimezone,
+    saveSelectedTimezone,
+} from './timezoneSelection'
 
 declare global {
     interface Window {
@@ -160,10 +171,44 @@ export default function App() {
     const [rightPaneSelected, setRightPaneSelected] = useState(false)
     const [diffPanelHeight, setDiffPanelHeight] = useState(256)
     const [aboutOpen, setAboutOpen] = useState(false)
+    const supportedTimezones = useMemo(getSupportedTimezoneNames, [])
+    const timezoneStorage = useMemo(() => {
+        try {
+            return window.localStorage
+        } catch {
+            return null
+        }
+    }, [])
+    const [selectedTimezone, setSelectedTimezone] = useState(() =>
+        loadSelectedTimezone(timezoneStorage, supportedTimezones)
+    )
+    const activeMode = useMemo(
+        () => mode || (inputA ? detectMode(inputA) : ''),
+        [inputA, mode]
+    )
+    const parsedTimezoneDate = useMemo(
+        () => parseTimezoneInput(inputA),
+        [inputA]
+    )
+    const timezoneOptionInstant = useMemo(
+        () => resolveTimezoneOptionInstant(parsedTimezoneDate),
+        [inputA, parsedTimezoneDate]
+    )
+    const timezoneOptions = useMemo(
+        () =>
+            activeMode === 'timezone'
+                ? buildTimezoneOptions(timezoneOptionInstant, supportedTimezones)
+                : [],
+        [activeMode, supportedTimezones, timezoneOptionInstant]
+    )
 
     useEffect(() => {
         inputRef.current?.focus()
     }, [])
+
+    useEffect(() => {
+        saveSelectedTimezone(timezoneStorage, selectedTimezone)
+    }, [selectedTimezone, timezoneStorage])
 
     useEffect(() => {
         if (mode === 'diff') {
@@ -274,6 +319,35 @@ export default function App() {
         }
     }
 
+    function renderAdditionalTimezone(date?: Date) {
+        return (
+            <div className="mt-4 space-y-2">
+                <label className="flex items-center gap-2">
+                    <span className="shrink-0">Additional timezone</span>
+                    <select
+                        aria-label="Additional timezone"
+                        className="min-w-0 max-w-full w-80 p-2 bg-gray-800/80 text-gray-100 border border-purple-600/40 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        value={selectedTimezone}
+                        onChange={(event) => setSelectedTimezone(event.target.value)}
+                    >
+                        <option value="">None</option>
+                        {timezoneOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                                {option.label}
+                            </option>
+                        ))}
+                    </select>
+                </label>
+                {date && selectedTimezone ? (
+                    <div>
+                        {formatTimezoneLabel(selectedTimezone)}:{' '}
+                        {formatDateInTimezone(date, selectedTimezone)}
+                    </div>
+                ) : null}
+            </div>
+        )
+    }
+
     function renderPaneByMode(
         mode: string,
         inputA: string,
@@ -313,12 +387,18 @@ export default function App() {
         if (mode === 'timezone') {
             const date = parseTimezoneInput(inputA)
             if (!date) {
-                return <div className="text-red-600">Invalid date or time</div>
+                return (
+                    <div>
+                        <div className="text-red-600">Invalid date or time</div>
+                        {renderAdditionalTimezone()}
+                    </div>
+                )
             }
             return (
                 <div>
                     <div>Local: {date.toString()}</div>
                     <div>UTC: {date.toUTCString()}</div>
+                    {renderAdditionalTimezone(date)}
                 </div>
             )
         }
@@ -378,18 +458,19 @@ export default function App() {
             if (!inputA) {
                 return <div className="text-gray-300 text-center">Please enter some input. We will try to auto-detect the most appropriate mode. Alternatively, you can select a mode from the dropdown above.</div>
             }
-            const autodetected = detectMode(inputA)
-            if (!autodetected) {
+            if (!activeMode) {
                 return <div className="text-gray-300 text-center">No mode auto-detected. Please enter valid input or select a mode.</div>
             }
             return (
                 <>
-                    <div className="font-medium mb-3" style={{ color: '#cc9cfc' }}>Auto-detected: {autodetected}</div>
-                    {renderPaneByMode(autodetected, inputA, inputB, setInputB)}
+                    <div className="font-medium mb-3" style={{ color: '#cc9cfc' }}>
+                        Auto-detected: {activeMode}
+                    </div>
+                    {renderPaneByMode(activeMode, inputA, inputB, setInputB)}
                 </>
             )
         }
-        return renderPaneByMode(mode, inputA, inputB, setInputB)
+        return renderPaneByMode(activeMode, inputA, inputB, setInputB)
     }
 
     const handleDiffPanelResizeMouseDown = (
